@@ -40,3 +40,4 @@ Managed GitLab
 
 - [要件定義](docs/ja-JP/仕様/01_要件定義.md)
 - [通信方式設計](docs/ja-JP/仕様/02_通信方式設計.md)
+- [フォルダ構成設計](docs/ja-JP/仕様/03_フォルダ構成設計.md)

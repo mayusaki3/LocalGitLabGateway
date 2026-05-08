@@ -43,3 +43,4 @@ Managed GitLab
 - [フォルダ構成設計](docs/ja-JP/仕様/03_フォルダ構成設計.md)
 - [Public Gateway Service API仕様](docs/ja-JP/仕様/04_Public Gateway Service API仕様.md)
 - [Private Bridge Agent API仕様](docs/ja-JP/仕様/05_Private Bridge Agent API仕様.md)
+- [ChatGPT Operation Profile仕様](docs/ja-JP/仕様/06_ChatGPT Operation Profile仕様.md)

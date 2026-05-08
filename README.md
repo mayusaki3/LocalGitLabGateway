@@ -22,6 +22,21 @@ LocalGitLabGateway は、外部公開された Linux サーバーを経由して
 - ChatGPT Operation Profile
 - HLDocS 準拠ドキュメント
 
+## 採用通信方式
+
+初期採用方式:
+
+```text
+ChatGPT
+  ↓ HTTPS
+Public Gateway Service
+  ↓ WireGuard VPN
+Private Bridge Agent
+  ↓ GitLab REST API v4
+Managed GitLab
+```
+
 ## ドキュメント
 
 - [要件定義](docs/ja-JP/仕様/01_要件定義.md)
+- [通信方式設計](docs/ja-JP/仕様/02_通信方式設計.md)

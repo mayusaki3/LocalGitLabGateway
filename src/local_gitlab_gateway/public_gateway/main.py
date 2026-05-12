@@ -3,21 +3,31 @@
 This module provides the FastAPI application for the public gateway.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 import uvicorn
+
+from local_gitlab_gateway.common.middleware.request_id import request_id_middleware
 
 app = FastAPI(title="LocalGitLabGateway Public Gateway")
 
+app.middleware("http")(request_id_middleware)
+
 
 @app.get("/health")
-def health() -> dict[str, str]:
+def health(request: Request) -> dict[str, str]:
     """Health check endpoint.
 
+    Args:
+        request: FastAPI request.
+
     Returns:
-        dict[str, str]: Service status.
+        dict[str, str]: Service status and request ID.
     """
 
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "request_id": request.state.request_id,
+    }
 
 
 def run() -> None:

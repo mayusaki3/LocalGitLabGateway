@@ -1,0 +1,10 @@
+server:
+  host: 0.0.0.0
+  port: 8080
+
+security:
+  api_key: CHANGE_ME
+
+private_bridge:
+  base_url: http://10.100.0.2:8081
+  timeout_seconds: 30

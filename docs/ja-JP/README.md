@@ -1,0 +1,18 @@
+# LocalGitLabGateway ドキュメント
+
+## 仕様
+
+- [01_要件定義](仕様/01_要件定義.md)
+- [02_通信方式設計](仕様/02_通信方式設計.md)
+- [03_フォルダ構成設計](仕様/03_フォルダ構成設計.md)
+- [04_Public Gateway Service API仕様](仕様/04_Public Gateway Service API仕様.md)
+- [05_Private Bridge Agent API仕様](仕様/05_Private Bridge Agent API仕様.md)
+- [06_ChatGPT Operation Profile仕様](仕様/06_ChatGPT Operation Profile仕様.md)
+
+## テスト仕様
+
+- [01_初期APIテスト仕様](テスト仕様/01_初期APIテスト仕様.md)
+
+## 運用
+
+- [01_環境構築手順](運用/01_環境構築手順.md)

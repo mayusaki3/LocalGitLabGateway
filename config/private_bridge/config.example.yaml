@@ -1,0 +1,10 @@
+server:
+  host: 0.0.0.0
+  port: 8081
+
+security:
+  internal_api_key: CHANGE_ME
+
+gitlab:
+  base_url: http://127.0.0.1
+  personal_access_token: CHANGE_ME

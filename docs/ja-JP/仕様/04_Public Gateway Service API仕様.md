@@ -1,14 +1,29 @@
-[目次](../README.md) > 仕様 > 04_Public Gateway Service API仕様
+<!--
+HLDocS:LLM-MANAGED
+doc_id: doc-20260513-000006Z-LGG-PG-API
+lang: ja-JP
+canonical_title: Public Gateway Service API仕様
+document_type: spec
+canonical_document: true
+-->
+
+[目次](../目次.md) > 仕様 > 04_Public Gateway Service API仕様
 
 # Public Gateway Service API仕様
 
+本書は、ChatGPT から利用される Public Gateway Service の公開 API を定義する仕様書である。
+
 ## 1. 目的
+
+<!-- sec_id: sec_lgg_pg_api_001 -->
 
 本書は、ChatGPT から利用される Public Gateway Service の公開 API を定義する。
 
 Public Gateway Service は、ChatGPT からの要求を受け付け、Private Bridge Agent へ安全に転送する。
 
 ## 2. 基本方針
+
+<!-- sec_id: sec_lgg_pg_api_002 -->
 
 - ChatGPT は Public Gateway Service のみへ接続する
 - ChatGPT は Private Bridge Agent へ直接接続しない
@@ -18,6 +33,8 @@ Public Gateway Service は、ChatGPT からの要求を受け付け、Private Br
 - JSON API とする
 
 ## 3. エンドポイント一覧
+
+<!-- sec_id: sec_lgg_pg_api_003 -->
 
 | Method | Path | 役割 |
 | --- | --- | --- |
@@ -32,13 +49,15 @@ Public Gateway Service は、ChatGPT からの要求を受け付け、Private Br
 
 ## 4. 共通仕様
 
-## 4.1 Content-Type
+<!-- sec_id: sec_lgg_pg_api_004 -->
+
+### 4.1 Content-Type
 
 ```text
 application/json
 ```
 
-## 4.2 認証
+### 4.2 認証
 
 HTTP Header に API Key を指定する。
 
@@ -46,7 +65,7 @@ HTTP Header に API Key を指定する。
 Authorization: Bearer <API_KEY>
 ```
 
-## 4.3 request_id
+### 4.3 request_id
 
 全レスポンスに `request_id` を含める。
 
@@ -56,7 +75,7 @@ Authorization: Bearer <API_KEY>
 }
 ```
 
-## 4.4 エラー応答
+### 4.4 エラー応答
 
 ```json
 {
@@ -70,29 +89,34 @@ Authorization: Bearer <API_KEY>
 
 ## 5. Health API
 
-## 5.1 Request
+<!-- sec_id: sec_lgg_pg_api_005 -->
+
+### 5.1 Request
 
 ```http
 GET /health
 ```
 
-## 5.2 Response
+### 5.2 Response
 
 ```json
 {
-  "status": "ok"
+  "status": "ok",
+  "request_id": "req_xxxxxxxx"
 }
 ```
 
 ## 6. Project List API
 
-## 6.1 Request
+<!-- sec_id: sec_lgg_pg_api_006 -->
+
+### 6.1 Request
 
 ```http
 GET /v1/projects
 ```
 
-## 6.2 Response
+### 6.2 Response
 
 ```json
 {
@@ -109,13 +133,15 @@ GET /v1/projects
 
 ## 7. Branch List API
 
-## 7.1 Request
+<!-- sec_id: sec_lgg_pg_api_007 -->
+
+### 7.1 Request
 
 ```http
 GET /v1/projects/{project_id}/branches
 ```
 
-## 7.2 Response
+### 7.2 Response
 
 ```json
 {
@@ -130,13 +156,15 @@ GET /v1/projects/{project_id}/branches
 
 ## 8. File Get API
 
-## 8.1 Request
+<!-- sec_id: sec_lgg_pg_api_008 -->
+
+### 8.1 Request
 
 ```http
 GET /v1/projects/{project_id}/files/{file_path}?ref=main
 ```
 
-## 8.2 Response
+### 8.2 Response
 
 ```json
 {
@@ -149,7 +177,9 @@ GET /v1/projects/{project_id}/files/{file_path}?ref=main
 
 ## 9. File Create API
 
-## 9.1 Request
+<!-- sec_id: sec_lgg_pg_api_009 -->
+
+### 9.1 Request
 
 ```http
 POST /v1/projects/{project_id}/files/{file_path}
@@ -163,7 +193,7 @@ POST /v1/projects/{project_id}/files/{file_path}
 }
 ```
 
-## 9.2 Response
+### 9.2 Response
 
 ```json
 {
@@ -174,7 +204,9 @@ POST /v1/projects/{project_id}/files/{file_path}
 
 ## 10. File Update API
 
-## 10.1 Request
+<!-- sec_id: sec_lgg_pg_api_010 -->
+
+### 10.1 Request
 
 ```http
 PUT /v1/projects/{project_id}/files/{file_path}
@@ -188,7 +220,7 @@ PUT /v1/projects/{project_id}/files/{file_path}
 }
 ```
 
-## 10.2 Response
+### 10.2 Response
 
 ```json
 {
@@ -199,7 +231,9 @@ PUT /v1/projects/{project_id}/files/{file_path}
 
 ## 11. Merge Request Create API
 
-## 11.1 Request
+<!-- sec_id: sec_lgg_pg_api_011 -->
+
+### 11.1 Request
 
 ```http
 POST /v1/projects/{project_id}/merge-requests
@@ -213,7 +247,7 @@ POST /v1/projects/{project_id}/merge-requests
 }
 ```
 
-## 11.2 Response
+### 11.2 Response
 
 ```json
 {
@@ -225,7 +259,9 @@ POST /v1/projects/{project_id}/merge-requests
 
 ## 12. Issue Create API
 
-## 12.1 Request
+<!-- sec_id: sec_lgg_pg_api_012 -->
+
+### 12.1 Request
 
 ```http
 POST /v1/projects/{project_id}/issues
@@ -238,7 +274,7 @@ POST /v1/projects/{project_id}/issues
 }
 ```
 
-## 12.2 Response
+### 12.2 Response
 
 ```json
 {
@@ -249,6 +285,8 @@ POST /v1/projects/{project_id}/issues
 ```
 
 ## 13. 監査ログ
+
+<!-- sec_id: sec_lgg_pg_api_013 -->
 
 全 API 呼び出しについて、以下を記録する。
 
@@ -262,7 +300,9 @@ POST /v1/projects/{project_id}/issues
 
 ## 14. 制限事項
 
-## 14.1 初期禁止操作
+<!-- sec_id: sec_lgg_pg_api_014 -->
+
+### 14.1 初期禁止操作
 
 初期実装では以下を禁止する。
 
@@ -275,7 +315,7 @@ POST /v1/projects/{project_id}/issues
 - runner operation
 - GitLab admin API
 
-## 14.2 ファイルサイズ制限
+### 14.2 ファイルサイズ制限
 
 初期実装ではファイルサイズ上限を設定する。
 
@@ -286,6 +326,8 @@ POST /v1/projects/{project_id}/issues
 ```
 
 ## 15. HTTP Status Code
+
+<!-- sec_id: sec_lgg_pg_api_015 -->
 
 | Status | 用途 |
 | --- | --- |
@@ -300,6 +342,8 @@ POST /v1/projects/{project_id}/issues
 
 ## 16. 決定事項
 
+<!-- sec_id: sec_lgg_pg_api_016 -->
+
 - ChatGPT からは Public Gateway Service のみへアクセスする
 - GitLab API は直接公開しない
 - Public Gateway Service は GitLab Token を保持しない
@@ -308,4 +352,4 @@ POST /v1/projects/{project_id}/issues
 
 ---
 
-[目次](../README.md) > 仕様 > 04_Public Gateway Service API仕様
+[目次](../目次.md) > 仕様 > 04_Public Gateway Service API仕様

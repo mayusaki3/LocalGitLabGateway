@@ -1,0 +1,17 @@
+[Unit]
+Description=LocalGitLabGateway Private Bridge Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=stkadmin
+Group=stkadmin
+WorkingDirectory=/opt/local-gitlab-gateway
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/local-gitlab-gateway/.venv/bin/local-gitlab-gateway-private
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

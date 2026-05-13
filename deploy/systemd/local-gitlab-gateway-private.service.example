@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=stkadmin
-Group=stkadmin
+User=ubuntu
+Group=ubuntu
 WorkingDirectory=/opt/local-gitlab-gateway
 Environment=PYTHONUNBUFFERED=1
 ExecStart=/opt/local-gitlab-gateway/.venv/bin/local-gitlab-gateway-private

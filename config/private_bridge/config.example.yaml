@@ -3,8 +3,8 @@ server:
   port: 8081
 
 security:
-  internal_api_key: CHANGE_ME
+  internal_api_key: CHANGE_ME_INTERNAL_API_KEY
 
 gitlab:
   base_url: http://127.0.0.1
-  personal_access_token: CHANGE_ME
+  personal_access_token: CHANGE_ME_GITLAB_PAT

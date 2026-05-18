@@ -39,13 +39,13 @@ Public Gateway Service は、ChatGPT からの要求を受け付け、Private Br
 | Method | Path | 役割 |
 | --- | --- | --- |
 | GET | `/health` | ヘルスチェック |
-| GET | `/v1/projects` | Project 一覧取得 |
-| GET | `/v1/projects/{project_id}/branches` | Branch 一覧取得 |
-| GET | `/v1/projects/{project_id}/files/{file_path}` | File 取得 |
-| POST | `/v1/projects/{project_id}/files/{file_path}` | File 作成 |
-| PUT | `/v1/projects/{project_id}/files/{file_path}` | File 更新 |
-| POST | `/v1/projects/{project_id}/merge-requests` | Merge Request 作成 |
-| POST | `/v1/projects/{project_id}/issues` | Issue 作成 |
+| GET | `/api/v1/projects` | Project 一覧取得 |
+| GET | `/api/v1/projects/{project_id}/branches` | Branch 一覧取得 |
+| GET | `/api/v1/projects/{project_id}/files/{file_path}` | File 取得 |
+| POST | `/api/v1/projects/{project_id}/files/{file_path}` | File 作成 |
+| PUT | `/api/v1/projects/{project_id}/files/{file_path}` | File 更新 |
+| POST | `/api/v1/projects/{project_id}/merge-requests` | Merge Request 作成 |
+| POST | `/api/v1/projects/{project_id}/issues` | Issue 作成 |
 
 ## 4. 共通仕様
 
@@ -113,7 +113,7 @@ GET /health
 ### 6.1 Request
 
 ```http
-GET /v1/projects
+GET /api/v1/projects
 ```
 
 ### 6.2 Response
@@ -138,7 +138,7 @@ GET /v1/projects
 ### 7.1 Request
 
 ```http
-GET /v1/projects/{project_id}/branches
+GET /api/v1/projects/{project_id}/branches
 ```
 
 ### 7.2 Response
@@ -161,7 +161,7 @@ GET /v1/projects/{project_id}/branches
 ### 8.1 Request
 
 ```http
-GET /v1/projects/{project_id}/files/{file_path}?ref=main
+GET /api/v1/projects/{project_id}/files/{file_path}?ref=main
 ```
 
 ### 8.2 Response
@@ -182,7 +182,7 @@ GET /v1/projects/{project_id}/files/{file_path}?ref=main
 ### 9.1 Request
 
 ```http
-POST /v1/projects/{project_id}/files/{file_path}
+POST /api/v1/projects/{project_id}/files/{file_path}
 ```
 
 ```json
@@ -209,7 +209,7 @@ POST /v1/projects/{project_id}/files/{file_path}
 ### 10.1 Request
 
 ```http
-PUT /v1/projects/{project_id}/files/{file_path}
+PUT /api/v1/projects/{project_id}/files/{file_path}
 ```
 
 ```json
@@ -236,7 +236,7 @@ PUT /v1/projects/{project_id}/files/{file_path}
 ### 11.1 Request
 
 ```http
-POST /v1/projects/{project_id}/merge-requests
+POST /api/v1/projects/{project_id}/merge-requests
 ```
 
 ```json
@@ -264,7 +264,7 @@ POST /v1/projects/{project_id}/merge-requests
 ### 12.1 Request
 
 ```http
-POST /v1/projects/{project_id}/issues
+POST /api/v1/projects/{project_id}/issues
 ```
 
 ```json

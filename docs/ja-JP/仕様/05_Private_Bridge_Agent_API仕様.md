@@ -40,13 +40,13 @@ Private Bridge Agent は、Public Gateway Service から受け取った要求を
 | Method | Path | 役割 |
 | --- | --- | --- |
 | GET | `/internal/health` | 内部ヘルスチェック |
-| GET | `/internal/v1/projects` | Project 一覧取得 |
-| GET | `/internal/v1/projects/{project_id}/branches` | Branch 一覧取得 |
-| GET | `/internal/v1/projects/{project_id}/files/{file_path}` | File 取得 |
-| POST | `/internal/v1/projects/{project_id}/files/{file_path}` | File 作成 |
-| PUT | `/internal/v1/projects/{project_id}/files/{file_path}` | File 更新 |
-| POST | `/internal/v1/projects/{project_id}/merge-requests` | Merge Request 作成 |
-| POST | `/internal/v1/projects/{project_id}/issues` | Issue 作成 |
+| GET | `/internal/api/v1/projects` | Project 一覧取得 |
+| GET | `/internal/api/v1/projects/{project_id}/branches` | Branch 一覧取得 |
+| GET | `/internal/api/v1/projects/{project_id}/files/{file_path}` | File 取得 |
+| POST | `/internal/api/v1/projects/{project_id}/files/{file_path}` | File 作成 |
+| PUT | `/internal/api/v1/projects/{project_id}/files/{file_path}` | File 更新 |
+| POST | `/internal/api/v1/projects/{project_id}/merge-requests` | Merge Request 作成 |
+| POST | `/internal/api/v1/projects/{project_id}/issues` | Issue 作成 |
 
 ## 4. 共通仕様
 
@@ -114,7 +114,7 @@ GET /internal/health
 ### 6.1 Request
 
 ```http
-GET /internal/v1/projects
+GET /internal/api/v1/projects
 ```
 
 ### 6.2 GitLab API Mapping
@@ -145,7 +145,7 @@ GET /api/v4/projects
 ### 7.1 Request
 
 ```http
-GET /internal/v1/projects/{project_id}/branches
+GET /internal/api/v1/projects/{project_id}/branches
 ```
 
 ### 7.2 GitLab API Mapping
@@ -174,7 +174,7 @@ GET /api/v4/projects/{project_id}/repository/branches
 ### 8.1 Request
 
 ```http
-GET /internal/v1/projects/{project_id}/files/{file_path}?ref=main
+GET /internal/api/v1/projects/{project_id}/files/{file_path}?ref=main
 ```
 
 ### 8.2 GitLab API Mapping
@@ -203,7 +203,7 @@ GitLab API の `file_path` は URL encode して送信する。
 ### 9.1 Request
 
 ```http
-POST /internal/v1/projects/{project_id}/files/{file_path}
+POST /internal/api/v1/projects/{project_id}/files/{file_path}
 ```
 
 ```json
@@ -237,7 +237,7 @@ POST /api/v4/projects/{project_id}/repository/files/{file_path}
 ### 10.1 Request
 
 ```http
-PUT /internal/v1/projects/{project_id}/files/{file_path}
+PUT /internal/api/v1/projects/{project_id}/files/{file_path}
 ```
 
 ```json
@@ -271,7 +271,7 @@ PUT /api/v4/projects/{project_id}/repository/files/{file_path}
 ### 11.1 Request
 
 ```http
-POST /internal/v1/projects/{project_id}/merge-requests
+POST /internal/api/v1/projects/{project_id}/merge-requests
 ```
 
 ```json
@@ -306,7 +306,7 @@ POST /api/v4/projects/{project_id}/merge_requests
 ### 12.1 Request
 
 ```http
-POST /internal/v1/projects/{project_id}/issues
+POST /internal/api/v1/projects/{project_id}/issues
 ```
 
 ```json

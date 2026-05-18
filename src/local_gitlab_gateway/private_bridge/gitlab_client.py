@@ -27,7 +27,10 @@ async def fetch_gitlab_version(
 
     url = f"{base_url.rstrip('/')}/api/v4/version"
 
-    async with httpx.AsyncClient(timeout=timeout_seconds) as client:
+    async with httpx.AsyncClient(
+        timeout=timeout_seconds,
+        verify=False,
+    ) as client:
         response = await client.get(
             url,
             headers={

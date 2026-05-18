@@ -18,6 +18,9 @@ from local_gitlab_gateway.private_bridge.gitlab_client import (
 from local_gitlab_gateway.private_bridge.gitlab_projects import (
     fetch_gitlab_projects,
 )
+from local_gitlab_gateway.private_bridge.gitlab_repository_tree import (
+    fetch_repository_tree,
+)
 
 runtime_config = load_private_bridge_config()
 
@@ -30,6 +33,10 @@ app.state.gitlab_base_url = runtime_config["gitlab"]["base_url"]
 app.state.gitlab_personal_access_token = runtime_config["gitlab"][
     "personal_access_token"
 ]
+app.state.gitlab_verify_tls = runtime_config["gitlab"].get(
+    "verify_tls",
+    True,
+)
 
 app.middleware("http")(internal_api_key_middleware)
 app.middleware("http")(request_id_middleware)
@@ -122,6 +129,51 @@ async def gitlab_projects(
         "page": page,
         "per_page": per_page,
         "projects": projects,
+    }
+
+
+@app.get(
+    "/internal/gitlab/projects/{project_id}/repository/tree"
+)
+async def repository_tree(
+    request: Request,
+    project_id: int,
+    path: str | None = None,
+    ref: str | None = None,
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=20, ge=1, le=100),
+) -> dict:
+    """Fetch GitLab repository tree."""
+
+    try:
+        tree = await fetch_repository_tree(
+            gitlab_base_url=app.state.gitlab_base_url,
+            personal_access_token=app.state.gitlab_personal_access_token,
+            project_id=project_id,
+            path=path,
+            ref=ref,
+            page=page,
+            per_page=per_page,
+            verify_tls=app.state.gitlab_verify_tls,
+        )
+
+    except httpx.HTTPError as exception:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "gitlab_request_failed",
+                "message": str(exception),
+                "request_id": request.state.request_id,
+            },
+        ) from exception
+
+    return {
+        "status": "ok",
+        "request_id": request.state.request_id,
+        "project_id": project_id,
+        "page": page,
+        "per_page": per_page,
+        "tree": tree,
     }
 
 

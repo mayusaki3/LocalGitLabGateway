@@ -18,6 +18,9 @@ from local_gitlab_gateway.private_bridge.gitlab_client import (
 from local_gitlab_gateway.private_bridge.gitlab_projects import (
     fetch_gitlab_projects,
 )
+from local_gitlab_gateway.private_bridge.gitlab_repository_file import (
+    fetch_repository_file,
+)
 from local_gitlab_gateway.private_bridge.gitlab_repository_tree import (
     fetch_repository_tree,
 )
@@ -44,14 +47,7 @@ app.middleware("http")(request_id_middleware)
 
 @app.get("/internal/health")
 def health(request: Request) -> dict[str, str]:
-    """Health check endpoint.
-
-    Args:
-        request: FastAPI request.
-
-    Returns:
-        dict[str, str]: Service status and request ID.
-    """
+    """Health check endpoint."""
 
     return {
         "status": "ok",
@@ -174,6 +170,47 @@ async def repository_tree(
         "page": page,
         "per_page": per_page,
         "tree": tree,
+    }
+
+
+@app.get(
+    "/internal/gitlab/projects/{project_id}/repository/files/{file_path:path}"
+)
+async def repository_file(
+    request: Request,
+    project_id: int,
+    file_path: str,
+    ref: str = "HEAD",
+) -> dict:
+    """Fetch GitLab repository file."""
+
+    try:
+        content = await fetch_repository_file(
+            gitlab_base_url=app.state.gitlab_base_url,
+            personal_access_token=app.state.gitlab_personal_access_token,
+            project_id=project_id,
+            file_path=file_path,
+            ref=ref,
+            verify_tls=app.state.gitlab_verify_tls,
+        )
+
+    except httpx.HTTPError as exception:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "gitlab_request_failed",
+                "message": str(exception),
+                "request_id": request.state.request_id,
+            },
+        ) from exception
+
+    return {
+        "status": "ok",
+        "request_id": request.state.request_id,
+        "project_id": project_id,
+        "file_path": file_path,
+        "ref": ref,
+        "content": content,
     }
 
 

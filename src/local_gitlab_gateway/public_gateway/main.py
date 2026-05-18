@@ -12,6 +12,9 @@ from local_gitlab_gateway.common.middleware.api_key import (
     public_api_key_middleware,
 )
 from local_gitlab_gateway.common.middleware.request_id import request_id_middleware
+from local_gitlab_gateway.common.middleware.utf8_json import (
+    Utf8JsonMiddleware,
+)
 from local_gitlab_gateway.public_gateway.private_bridge_client import (
     fetch_projects_via_private_bridge,
 )
@@ -25,6 +28,8 @@ from local_gitlab_gateway.public_gateway.private_bridge_repository_tree import (
 runtime_config = load_public_gateway_config()
 
 app = FastAPI(title="LocalGitLabGateway Public Gateway")
+
+app.add_middleware(Utf8JsonMiddleware)
 
 app.state.public_api_key = runtime_config["security"]["api_key"]
 app.state.private_bridge_base_url = runtime_config["private_bridge"]["base_url"]

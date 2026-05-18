@@ -24,6 +24,8 @@ async def public_api_key_middleware(
     if request.url.path in PUBLIC_EXCLUDED_PATHS:
         return await call_next(request)
 
+    request_id = getattr(request.state, "request_id", None)
+
     expected_api_key = getattr(request.app.state, "public_api_key", None)
 
     if not expected_api_key:
@@ -31,7 +33,7 @@ async def public_api_key_middleware(
             status_code=500,
             content={
                 "error": "public_api_key_not_configured",
-                "request_id": request.state.request_id,
+                "request_id": request_id,
             },
         )
 
@@ -42,7 +44,7 @@ async def public_api_key_middleware(
             status_code=401,
             content={
                 "error": "invalid_api_key",
-                "request_id": request.state.request_id,
+                "request_id": request_id,
             },
         )
 
@@ -58,6 +60,8 @@ async def internal_api_key_middleware(
     if request.url.path in PRIVATE_EXCLUDED_PATHS:
         return await call_next(request)
 
+    request_id = getattr(request.state, "request_id", None)
+
     expected_api_key = getattr(request.app.state, "internal_api_key", None)
 
     if not expected_api_key:
@@ -65,7 +69,7 @@ async def internal_api_key_middleware(
             status_code=500,
             content={
                 "error": "internal_api_key_not_configured",
-                "request_id": request.state.request_id,
+                "request_id": request_id,
             },
         )
 
@@ -76,7 +80,7 @@ async def internal_api_key_middleware(
             status_code=401,
             content={
                 "error": "invalid_internal_api_key",
-                "request_id": request.state.request_id,
+                "request_id": request_id,
             },
         )
 

@@ -21,8 +21,8 @@ app.state.internal_api_key = runtime_config["security"][
 ]
 app.state.gitlab_base_url = runtime_config["gitlab"]["base_url"]
 
-app.middleware("http")(request_id_middleware)
 app.middleware("http")(internal_api_key_middleware)
+app.middleware("http")(request_id_middleware)
 
 
 @app.get("/internal/health")

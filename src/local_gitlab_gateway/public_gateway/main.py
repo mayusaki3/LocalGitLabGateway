@@ -3,7 +3,8 @@
 This module provides the FastAPI application for the public gateway.
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Query, Request
+import httpx
 import uvicorn
 
 from local_gitlab_gateway.common.config import load_public_gateway_config
@@ -11,6 +12,9 @@ from local_gitlab_gateway.common.middleware.api_key import (
     public_api_key_middleware,
 )
 from local_gitlab_gateway.common.middleware.request_id import request_id_middleware
+from local_gitlab_gateway.public_gateway.private_bridge_client import (
+    fetch_projects_via_private_bridge,
+)
 
 runtime_config = load_public_gateway_config()
 
@@ -51,6 +55,39 @@ def config_check(request: Request) -> dict[str, str]:
         "status": "ok",
         "request_id": request.state.request_id,
         "private_bridge_base_url": app.state.private_bridge_base_url,
+    }
+
+
+@app.get("/v1/gitlab/projects")
+async def gitlab_projects(
+    request: Request,
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=20, ge=1, le=100),
+) -> dict:
+    """Fetch GitLab projects through private bridge."""
+
+    try:
+        projects_response = await fetch_projects_via_private_bridge(
+            private_bridge_base_url=app.state.private_bridge_base_url,
+            internal_api_key=app.state.internal_api_key,
+            page=page,
+            per_page=per_page,
+        )
+
+    except httpx.HTTPError as exception:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "private_bridge_request_failed",
+                "message": str(exception),
+                "request_id": request.state.request_id,
+            },
+        ) from exception
+
+    return {
+        "status": "ok",
+        "request_id": request.state.request_id,
+        "private_bridge": projects_response,
     }
 
 

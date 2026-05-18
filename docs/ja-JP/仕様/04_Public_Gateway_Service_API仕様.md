@@ -7,7 +7,7 @@ document_type: spec
 canonical_document: true
 -->
 
-[目次](../目次.md) > 仕様 > 04_Public Gateway Service API仕様
+[目次](../目次.md) > 仕様 > Public Gateway Service API仕様
 
 # Public Gateway Service API仕様
 
@@ -352,4 +352,4 @@ POST /v1/projects/{project_id}/issues
 
 ---
 
-[目次](../目次.md) > 仕様 > 04_Public Gateway Service API仕様
+[目次](../目次.md) > 仕様 > Public Gateway Service API仕様

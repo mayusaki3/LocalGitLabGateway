@@ -7,7 +7,7 @@ document_type: spec
 canonical_document: true
 -->
 
-[目次](../目次.md) > 仕様 > 06_ChatGPT Operation Profile仕様
+[目次](../目次.md) > 仕様 > ChatGPT Operation Profile仕様
 
 # ChatGPT Operation Profile仕様
 
@@ -281,4 +281,4 @@ profiles/chatgpt/
 
 ---
 
-[目次](../目次.md) > 仕様 > 06_ChatGPT Operation Profile仕様
+[目次](../目次.md) > 仕様 > ChatGPT Operation Profile仕様

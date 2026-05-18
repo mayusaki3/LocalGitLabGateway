@@ -15,6 +15,9 @@ from local_gitlab_gateway.common.middleware.request_id import request_id_middlew
 from local_gitlab_gateway.public_gateway.private_bridge_client import (
     fetch_projects_via_private_bridge,
 )
+from local_gitlab_gateway.public_gateway.private_bridge_repository_tree import (
+    fetch_repository_tree_via_private_bridge,
+)
 
 runtime_config = load_public_gateway_config()
 
@@ -88,6 +91,47 @@ async def gitlab_projects(
         "status": "ok",
         "request_id": request.state.request_id,
         "private_bridge": projects_response,
+    }
+
+
+@app.get(
+    "/v1/gitlab/projects/{project_id}/repository/tree"
+)
+async def repository_tree(
+    request: Request,
+    project_id: int,
+    path: str | None = None,
+    ref: str | None = None,
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=20, ge=1, le=100),
+) -> dict:
+    """Fetch repository tree through private bridge."""
+
+    try:
+        tree_response = await fetch_repository_tree_via_private_bridge(
+            private_bridge_base_url=app.state.private_bridge_base_url,
+            internal_api_key=app.state.internal_api_key,
+            project_id=project_id,
+            path=path,
+            ref=ref,
+            page=page,
+            per_page=per_page,
+        )
+
+    except httpx.HTTPError as exception:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "private_bridge_request_failed",
+                "message": str(exception),
+                "request_id": request.state.request_id,
+            },
+        ) from exception
+
+    return {
+        "status": "ok",
+        "request_id": request.state.request_id,
+        "private_bridge": tree_response,
     }
 
 

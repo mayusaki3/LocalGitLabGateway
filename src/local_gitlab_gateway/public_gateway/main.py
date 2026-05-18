@@ -22,8 +22,8 @@ app.state.internal_api_key = runtime_config["private_bridge"][
     "internal_api_key"
 ]
 
-app.middleware("http")(request_id_middleware)
 app.middleware("http")(public_api_key_middleware)
+app.middleware("http")(request_id_middleware)
 
 
 @app.get("/health")

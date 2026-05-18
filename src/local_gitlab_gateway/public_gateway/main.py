@@ -15,6 +15,9 @@ from local_gitlab_gateway.common.middleware.request_id import request_id_middlew
 from local_gitlab_gateway.public_gateway.private_bridge_client import (
     fetch_projects_via_private_bridge,
 )
+from local_gitlab_gateway.public_gateway.private_bridge_repository_file import (
+    fetch_repository_file_via_private_bridge,
+)
 from local_gitlab_gateway.public_gateway.private_bridge_repository_tree import (
     fetch_repository_tree_via_private_bridge,
 )
@@ -35,14 +38,7 @@ app.middleware("http")(request_id_middleware)
 
 @app.get("/health")
 def health(request: Request) -> dict[str, str]:
-    """Health check endpoint.
-
-    Args:
-        request: FastAPI request.
-
-    Returns:
-        dict[str, str]: Service status and request ID.
-    """
+    """Health check endpoint."""
 
     return {
         "status": "ok",
@@ -132,6 +128,43 @@ async def repository_tree(
         "status": "ok",
         "request_id": request.state.request_id,
         "private_bridge": tree_response,
+    }
+
+
+@app.get(
+    "/v1/gitlab/projects/{project_id}/repository/files/{file_path:path}"
+)
+async def repository_file(
+    request: Request,
+    project_id: int,
+    file_path: str,
+    ref: str = "HEAD",
+) -> dict:
+    """Fetch repository file through private bridge."""
+
+    try:
+        file_response = await fetch_repository_file_via_private_bridge(
+            private_bridge_base_url=app.state.private_bridge_base_url,
+            internal_api_key=app.state.internal_api_key,
+            project_id=project_id,
+            file_path=file_path,
+            ref=ref,
+        )
+
+    except httpx.HTTPError as exception:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "private_bridge_request_failed",
+                "message": str(exception),
+                "request_id": request.state.request_id,
+            },
+        ) from exception
+
+    return {
+        "status": "ok",
+        "request_id": request.state.request_id,
+        "private_bridge": file_response,
     }
 
 

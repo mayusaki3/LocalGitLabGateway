@@ -12,6 +12,9 @@ from local_gitlab_gateway.common.middleware.api_key import (
     internal_api_key_middleware,
 )
 from local_gitlab_gateway.common.middleware.request_id import request_id_middleware
+from local_gitlab_gateway.common.middleware.utf8_json import (
+    Utf8JsonMiddleware,
+)
 from local_gitlab_gateway.private_bridge.gitlab_client import (
     fetch_gitlab_version,
 )
@@ -28,6 +31,8 @@ from local_gitlab_gateway.private_bridge.gitlab_repository_tree import (
 runtime_config = load_private_bridge_config()
 
 app = FastAPI(title="LocalGitLabGateway Private Bridge")
+
+app.add_middleware(Utf8JsonMiddleware)
 
 app.state.internal_api_key = runtime_config["security"][
     "internal_api_key"

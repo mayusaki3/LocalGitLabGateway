@@ -7,7 +7,7 @@ document_type: note
 canonical_document: true
 -->
 
-[目次](../目次.md) > 運用 > nginx 設定
+[目次](../目次.md) > 運用 > [運用目次](./運用目次.md) > nginx 設定
 
 # nginx 設定
 
@@ -83,4 +83,4 @@ sudo tail -n 50 /var/log/nginx/local-gitlab-gateway.error.log
 
 ---
 
-[目次](../目次.md) > 運用 > nginx 設定
+[目次](../目次.md) > 運用 > [運用目次](./運用目次.md) > nginx 設定

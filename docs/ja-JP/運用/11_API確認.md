@@ -7,7 +7,7 @@ document_type: note
 canonical_document: true
 -->
 
-[目次](../目次.md) > 運用 > API確認
+[目次](../目次.md) > 運用 > [運用目次](./運用目次.md) > API確認
 
 # API確認
 
@@ -45,4 +45,4 @@ Invoke-RestMethod `
 
 ---
 
-[目次](../目次.md) > 運用 > API確認
+[目次](../目次.md) > 運用 > [運用目次](./運用目次.md) > API確認

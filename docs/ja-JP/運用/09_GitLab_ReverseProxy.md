@@ -7,7 +7,7 @@ document_type: note
 canonical_document: true
 -->
 
-[目次](../目次.md) > 運用 > GitLab Reverse Proxy
+[目次](../目次.md) > 運用 > [運用目次](./運用目次.md) > GitLab Reverse Proxy
 
 # GitLab Reverse Proxy
 
@@ -64,4 +64,4 @@ curl -i http://127.0.0.1/gitlab/users/sign_in
 
 ---
 
-[目次](../目次.md) > 運用 > GitLab Reverse Proxy
+[目次](../目次.md) > 運用 > [運用目次](./運用目次.md) > GitLab Reverse Proxy

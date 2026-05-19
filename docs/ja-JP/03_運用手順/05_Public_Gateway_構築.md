@@ -7,14 +7,13 @@ document_type: note
 canonical_document: true
 -->
 
-[目次](../目次.md) > 運用 > Public Gateway 構築
+[目次](../目次.md) > 運用手順 > [運用手順目次](./運用手順目次.md) > Public Gateway 構築
 
 # Public Gateway 構築
 
 ## 対象ホスト
 
-- AIChaBoServ
-- <PUBLIC_SERVER_IP>
+- インターネット上に公開している Linux サーバー
 
 ## 稼働サービス
 
@@ -41,4 +40,4 @@ curl -i http://127.0.0.1:8080/health
 
 ---
 
-[目次](../目次.md) > 運用 > Public Gateway 構築
+[目次](../目次.md) > 運用手順 > [運用手順目次](./運用手順目次.md) > Public Gateway 構築

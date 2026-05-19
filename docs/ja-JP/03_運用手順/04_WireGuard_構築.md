@@ -7,7 +7,7 @@ document_type: note
 canonical_document: true
 -->
 
-[目次](../目次.md) > 運用 > [運用目次](./運用目次.md) > WireGuard 構築
+[目次](../目次.md) > 運用手順 > [運用手順目次](./運用手順目次.md) > WireGuard 構築
 
 # WireGuard 構築
 
@@ -80,4 +80,4 @@ systemctl status wg-quick@wg0 --no-pager
 
 ---
 
-[目次](../目次.md) > 運用 > [運用目次](./運用目次.md) > WireGuard 構築
+[目次](../目次.md) > 運用手順 > [運用手順目次](./運用手順目次.md) > WireGuard 構築

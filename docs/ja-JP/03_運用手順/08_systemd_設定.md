@@ -7,7 +7,7 @@ document_type: note
 canonical_document: true
 -->
 
-[目次](../目次.md) > 運用 > [運用目次](./運用目次.md) > systemd 設定
+[目次](../目次.md) > 運用手順 > [運用手順目次](./運用手順目次.md) > systemd 設定
 
 # systemd 設定
 
@@ -63,4 +63,4 @@ journalctl -u local-gitlab-gateway-private -n 50 --no-pager
 
 ---
 
-[目次](../目次.md) > 運用 > [運用目次](./運用目次.md) > systemd 設定
+[目次](../目次.md) > 運用手順 > [運用手順目次](./運用手順目次.md) > systemd 設定

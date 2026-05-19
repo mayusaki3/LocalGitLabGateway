@@ -1,0 +1,1200 @@
+<!--
+HLDocS:LLM-MANAGED
+doc_id: 
+lang: ja-JP
+canonical_title: Public Gateway Host 構築
+document_type: note
+canonical_document: true
+-->
+
+[目次](../目次.md) > 運用手順 > [運用手順目次](./運用手順目次.md) > Public Gateway Host 構築
+
+# Public Gateway Host 構築
+
+本書は、Public Gateway Host と Private GitLab Host に LocalGitLabGateway を配置し、各環境で段階的に動作確認するための作業手順を定義する。
+
+## 1. 目的
+
+本書は、Public Gateway Host と Private GitLab Host に LocalGitLabGateway を配置し、各環境で段階的に動作確認するための作業手順を定義する。
+
+## 2. 対象環境
+
+| 名称 | 説明 |
+| --- | --- |
+| Public Gateway Host | 外部公開された Linux サーバー。nginx、Public Gateway Service、WireGuard peer を配置する。 |
+| Private GitLab Host | ファイアウォール内の Linux サーバー。Managed GitLab、Private Bridge Agent、WireGuard peer を配置する。 |
+
+## 3. 前提条件
+
+- Public Gateway Host へ SSH 接続できること
+- Private GitLab Host へ SSH 接続できること
+- 両サーバーで sudo 権限が利用できること
+- Python 3.11 以上が利用可能であること
+- Git が利用可能であること
+- Public Gateway Host の 443/tcp を外部公開できること
+- Public Gateway Host の 51820/udp を Private GitLab Host から到達可能にできること
+
+## 4. 作業順序
+
+以下の順で作業する。
+
+1. SSH 接続確認
+2. 共通パッケージ導入
+3. 作業ディレクトリ作成
+4. リポジトリ clone または更新
+5. Python 仮想環境作成
+6. アプリ単体起動確認
+7. systemd 登録
+8. nginx 設定
+9. WireGuard 設定
+10. runtime 設定ファイル作成
+11. Public Gateway Service から Private Bridge Agent への接続確認
+12. ChatGPT Operation Profile 作成
+
+## 5. SSH 接続確認
+
+## 5.1 Public Gateway Host
+
+Public Gateway Host へ SSH 接続する。
+
+```bash
+ssh <PUBLIC_GATEWAY_USER>@<PUBLIC_GATEWAY_HOST>
+```
+
+接続後、作業対象ホストを確認する。
+
+```bash
+hostname
+whoami
+pwd
+```
+
+## 5.2 Private GitLab Host
+
+Private GitLab Host へ SSH 接続する。
+
+```bash
+ssh <PRIVATE_GITLAB_USER>@<PRIVATE_GITLAB_HOST>
+```
+
+接続後、作業対象ホストを確認する。
+
+```bash
+hostname
+whoami
+pwd
+```
+
+## 6. 共通パッケージ導入
+
+Public Gateway Host と Private GitLab Host の両方で実行する。
+
+```bash
+sudo apt update
+sudo apt install -y git python3 python3-venv python3-pip curl
+```
+
+WireGuard を使用する場合は両方で実行する。
+
+```bash
+sudo apt install -y wireguard
+```
+
+Public Gateway Host では nginx も導入する。
+
+```bash
+sudo apt install -y nginx
+```
+
+導入確認を行う。
+
+```bash
+git --version
+python3 --version
+curl --version
+```
+
+Public Gateway Host では nginx も確認する。
+
+```bash
+nginx -v
+```
+
+## 7. 作業ディレクトリ作成
+
+Public Gateway Host と Private GitLab Host の両方で実行する。
+
+## 7.1 配置先
+
+LocalGitLabGateway は以下に配置する。
+
+```text
+/opt/local-gitlab-gateway
+```
+
+## 7.2 ディレクトリ未作成の場合
+
+```bash
+sudo mkdir -p /opt/local-gitlab-gateway
+sudo chown "$USER":"$USER" /opt/local-gitlab-gateway
+chmod 755 /opt/local-gitlab-gateway
+```
+
+## 7.3 ディレクトリ作成確認
+
+```bash
+ls -ld /opt/local-gitlab-gateway
+```
+
+期待例:
+
+```text
+drwxr-xr-x ... <USER> <USER> ... /opt/local-gitlab-gateway
+```
+
+## 8. リポジトリ clone または更新
+
+Public Gateway Host と Private GitLab Host の両方で実行する。
+
+## 8.1 初回 clone
+
+`/opt/local-gitlab-gateway/.git` が存在しない場合は、初回 clone を行う。
+
+```bash
+if [ ! -d /opt/local-gitlab-gateway/.git ]; then
+  git clone https://github.com/mayusaki3/LocalGitLabGateway.git /opt/local-gitlab-gateway
+fi
+```
+
+## 8.2 既にディレクトリが存在し、空でない場合
+
+`git clone` は、配置先ディレクトリが空でない場合に失敗する。
+
+その場合は、以下で状態を確認する。
+
+```bash
+ls -la /opt/local-gitlab-gateway
+```
+
+`.git` が存在しない、かつ不要なファイルしかない場合は、退避してから clone する。
+
+```bash
+sudo mv /opt/local-gitlab-gateway /opt/local-gitlab-gateway.backup.$(date +%Y%m%d%H%M%S)
+sudo mkdir -p /opt/local-gitlab-gateway
+sudo chown "$USER":"$USER" /opt/local-gitlab-gateway
+git clone https://github.com/mayusaki3/LocalGitLabGateway.git /opt/local-gitlab-gateway
+```
+
+## 8.3 develop ブランチへ切り替え
+
+```bash
+cd /opt/local-gitlab-gateway
+git fetch origin
+git checkout develop
+git pull origin develop
+```
+
+## 8.4 clone / 更新確認
+
+```bash
+cd /opt/local-gitlab-gateway
+git status
+git branch --show-current
+git log --oneline -n 3
+```
+
+期待結果:
+
+```text
+On branch develop
+```
+
+## 9. Python 仮想環境作成
+
+Public Gateway Host と Private GitLab Host の両方で実行する。
+
+```bash
+cd /opt/local-gitlab-gateway
+python3 -m venv .venv
+. .venv/bin/activate
+pip install --upgrade pip
+pip install -e .
+```
+
+## 9.1 仮想環境確認
+
+```bash
+which python
+which pip
+python --version
+pip show local-gitlab-gateway
+```
+
+期待例:
+
+```text
+/opt/local-gitlab-gateway/.venv/bin/python
+```
+
+## 10. アプリ単体起動確認
+
+## 10.1 Public Gateway Host
+
+Public Gateway Host で実行する。
+
+```bash
+cd /opt/local-gitlab-gateway
+. .venv/bin/activate
+local-gitlab-gateway-public
+```
+
+別 SSH セッションで確認する。
+
+```bash
+curl -i http://127.0.0.1:8080/health
+```
+
+期待結果:
+
+```json
+{
+  "status": "ok",
+  "request_id": "req_xxxxx"
+}
+```
+
+レスポンスヘッダに以下が含まれること。
+
+```text
+X-Request-ID: req_xxxxx
+```
+
+## 10.2 Private GitLab Host
+
+Private GitLab Host で実行する。
+
+```bash
+cd /opt/local-gitlab-gateway
+. .venv/bin/activate
+local-gitlab-gateway-private
+```
+
+別 SSH セッションで確認する。
+
+```bash
+curl -i http://127.0.0.1:8081/internal/health
+```
+
+期待結果:
+
+```json
+{
+  "status": "ok",
+  "request_id": "req_xxxxx"
+}
+```
+
+レスポンスヘッダに以下が含まれること。
+
+```text
+X-Request-ID: req_xxxxx
+```
+
+## 11. systemd 登録
+
+手動起動で health API が動作することを確認してから、systemd に登録する。
+
+## 11.1 Public Gateway Host の systemd 登録
+
+Public Gateway Host で実行する。
+
+```bash
+cd /opt/local-gitlab-gateway
+git pull origin develop
+```
+
+unit ファイルを配置する。
+
+```bash
+sudo cp \
+  deploy/systemd/local-gitlab-gateway-public.service.example \
+  /etc/systemd/system/local-gitlab-gateway-public.service
+```
+
+unit ファイルの内容を確認する。
+
+```bash
+sudo systemctl cat local-gitlab-gateway-public
+```
+
+`User=` と `Group=` が実行ユーザーに一致していることを確認する。
+
+```text
+User=ubuntu
+Group=ubuntu
+```
+
+実行ユーザーが異なる場合は編集する。
+
+```bash
+sudo systemctl edit --full local-gitlab-gateway-public
+```
+
+systemd を再読み込みする。
+
+```bash
+sudo systemctl daemon-reload
+```
+
+自動起動を有効化する。
+
+```bash
+sudo systemctl enable local-gitlab-gateway-public
+```
+
+サービスを起動する。
+
+```bash
+sudo systemctl start local-gitlab-gateway-public
+```
+
+状態を確認する。
+
+```bash
+systemctl status local-gitlab-gateway-public --no-pager
+```
+
+ログを確認する。
+
+```bash
+journalctl -u local-gitlab-gateway-public -n 50 --no-pager
+```
+
+health API を確認する。
+
+```bash
+curl -i http://127.0.0.1:8080/health
+```
+
+期待結果:
+
+```text
+HTTP/1.1 200 OK
+```
+
+## 11.2 Private GitLab Host の systemd 登録
+
+Private GitLab Host で実行する。
+
+```bash
+cd /opt/local-gitlab-gateway
+git pull origin develop
+```
+
+unit ファイルを配置する。
+
+```bash
+sudo cp \
+  deploy/systemd/local-gitlab-gateway-private.service.example \
+  /etc/systemd/system/local-gitlab-gateway-private.service
+```
+
+unit ファイルの内容を確認する。
+
+```bash
+sudo systemctl cat local-gitlab-gateway-private
+```
+
+`User=` と `Group=` が実行ユーザーに一致していることを確認する。
+
+```text
+User=ubuntu
+Group=ubuntu
+```
+
+実行ユーザーが異なる場合は編集する。
+
+```bash
+sudo systemctl edit --full local-gitlab-gateway-private
+```
+
+systemd を再読み込みする。
+
+```bash
+sudo systemctl daemon-reload
+```
+
+自動起動を有効化する。
+
+```bash
+sudo systemctl enable local-gitlab-gateway-private
+```
+
+サービスを起動する。
+
+```bash
+sudo systemctl start local-gitlab-gateway-private
+```
+
+状態を確認する。
+
+```bash
+systemctl status local-gitlab-gateway-private --no-pager
+```
+
+ログを確認する。
+
+```bash
+journalctl -u local-gitlab-gateway-private -n 50 --no-pager
+```
+
+health API を確認する。
+
+```bash
+curl -i http://127.0.0.1:8081/internal/health
+```
+
+期待結果:
+
+```text
+HTTP/1.1 200 OK
+```
+
+## 11.3 systemd 起動失敗時の確認
+
+サービスが起動しない場合は、以下を確認する。
+
+```bash
+systemctl status <SERVICE_NAME> --no-pager
+journalctl -u <SERVICE_NAME> -n 100 --no-pager
+```
+
+実行ファイルの存在を確認する。
+
+```bash
+ls -l /opt/local-gitlab-gateway/.venv/bin/local-gitlab-gateway-public
+ls -l /opt/local-gitlab-gateway/.venv/bin/local-gitlab-gateway-private
+```
+
+作業ディレクトリを確認する。
+
+```bash
+ls -ld /opt/local-gitlab-gateway
+```
+
+Python パッケージのインストール状態を確認する。
+
+```bash
+cd /opt/local-gitlab-gateway
+. .venv/bin/activate
+pip show local-gitlab-gateway
+```
+
+ポート使用状況を確認する。
+
+```bash
+ss -ltnp | grep -E ':8080|:8081'
+```
+
+## 11.4 systemd 自動起動確認
+
+再起動後の確認を行う場合は、以下を実行する。
+
+```bash
+sudo reboot
+```
+
+再接続後、Public Gateway Host では以下を確認する。
+
+```bash
+systemctl status local-gitlab-gateway-public --no-pager
+curl -i http://127.0.0.1:8080/health
+```
+
+Private GitLab Host では以下を確認する。
+
+```bash
+systemctl status local-gitlab-gateway-private --no-pager
+curl -i http://127.0.0.1:8081/internal/health
+```
+
+## 12. nginx 設定
+
+nginx 設定は Public Gateway Host のみ対象とする。
+
+nginx は以下の役割を持つ。
+
+- Public Gateway Service への reverse proxy
+- 外部公開ポートを 80/tcp または 443/tcp に集約する
+- 後続工程で HTTPS 終端を担当する
+
+本章では、LocalGitLabGateway API と GitLab reverse proxy を nginx 経由で公開し、`/api/health` および `/gitlab/users/sign_in` へ到達できることを確認する。
+
+## 12.1 前提確認
+
+Public Gateway Host で実行する。
+
+```bash
+cd /opt/local-gitlab-gateway
+git pull origin develop
+```
+
+Public Gateway Service が systemd で起動していることを確認する。
+
+```bash
+systemctl status local-gitlab-gateway-public --no-pager
+curl -i http://127.0.0.1:8080/health
+```
+
+nginx がインストール済みであることを確認する。
+
+```bash
+nginx -v
+systemctl status nginx --no-pager
+```
+
+## 12.2 nginx 設定ファイル配置
+
+Public Gateway Host で実行する。
+
+```bash
+sudo cp \
+  deploy/nginx/local-gitlab-gateway.conf.example \
+  /etc/nginx/sites-available/local-gitlab-gateway.conf
+```
+
+配置結果を確認する。
+
+```bash
+ls -l /etc/nginx/sites-available/local-gitlab-gateway.conf
+```
+
+## 12.3 server_name の編集
+
+環境に合わせて `server_name` を変更する。
+
+```bash
+sudo nano /etc/nginx/sites-available/local-gitlab-gateway.conf
+```
+
+変更対象:
+
+```nginx
+server_name gateway.example.com;
+```
+
+ドメイン未取得または IP アドレスによる初期検証の場合は、以下でもよい。
+
+```nginx
+server_name _;
+```
+
+## 12.4 nginx 設定有効化
+
+`sites-enabled` に symlink を作成する。
+
+```bash
+sudo ln -s \
+  /etc/nginx/sites-available/local-gitlab-gateway.conf \
+  /etc/nginx/sites-enabled/local-gitlab-gateway.conf
+```
+
+既に symlink が存在する場合は確認する。
+
+```bash
+ls -l /etc/nginx/sites-enabled/local-gitlab-gateway.conf
+```
+
+Ubuntu default site が競合する場合は無効化してよい。
+
+```bash
+if [ -e /etc/nginx/sites-enabled/default ]; then
+  sudo rm /etc/nginx/sites-enabled/default
+fi
+```
+
+## 12.5 nginx 構文確認
+
+設定反映前に構文確認を行う。
+
+```bash
+sudo nginx -t
+```
+
+期待結果:
+
+```text
+syntax is ok
+test is successful
+```
+
+構文確認が失敗した場合は reload してはならない。
+
+## 12.6 nginx reload
+
+設定反映を行う。
+
+```bash
+sudo systemctl reload nginx
+```
+
+状態確認:
+
+```bash
+systemctl status nginx --no-pager
+```
+
+## 12.7 nginx 経由確認
+
+LocalGitLabGateway API 確認。
+
+Public Gateway Host 内から実行する。  
+`/api/` prefix は nginx reverse proxy により LocalGitLabGateway 側 `/` へ転送される。
+
+```bash
+curl -i http://127.0.0.1/api/health
+```
+
+期待結果:
+
+```text
+HTTP/1.1 200 OK
+```
+
+期待 JSON:
+
+```json
+{
+  "status": "ok",
+  "request_id": "req_xxxxx"
+}
+```
+
+外部端末または別ホストから確認する。
+
+```bash
+curl -i http://<PUBLIC_GATEWAY_HOST_OR_DOMAIN>/api/health
+```
+
+次に GitLab reverse proxy を確認する。
+
+```bash
+curl -i http://127.0.0.1/gitlab/users/sign_in
+```
+
+期待結果:
+
+```text
+HTTP/1.1 200 OK
+```
+
+または:
+
+```text
+HTTP/1.1 302 Found
+```
+
+外部端末または別ホストから確認する。
+
+```bash
+curl -i http://<PUBLIC_GATEWAY_HOST_OR_DOMAIN>/gitlab/users/sign_in
+```
+
+Git clone 確認:
+
+```bash
+git clone \
+  http://<PUBLIC_GATEWAY_HOST_OR_DOMAIN>/gitlab/<GROUP>/<REPOSITORY>.git
+```
+
+## 12.8 nginx ログ確認
+
+アクセスログ確認:
+
+```bash
+sudo tail -n 50 /var/log/nginx/local-gitlab-gateway.access.log
+```
+
+エラーログ確認:
+
+```bash
+sudo tail -n 50 /var/log/nginx/local-gitlab-gateway.error.log
+```
+
+## 12.9 nginx 経由確認失敗時の確認
+
+LocalGitLabGateway API 側確認:
+
+```bash
+systemctl status local-gitlab-gateway-public --no-pager
+curl -i http://127.0.0.1:8080/health
+```
+
+GitLab reverse proxy 側確認:
+
+```bash
+curl -k -i https://10.20.30.2/gitlab/users/sign_in
+```
+
+WireGuard 疎通確認:
+
+```bash
+ping -c 3 10.20.30.2
+```
+
+80/tcp listen 確認:
+
+```bash
+sudo ss -ltnp | grep ':80'
+```
+
+nginx 設定確認:
+
+```bash
+sudo nginx -T
+```
+
+## 12.10 HTTPS 化について
+
+現在の初期構成は HTTP 公開である。
+
+本番運用前には HTTPS 化を推奨する。
+
+推奨構成:
+
+- Let's Encrypt
+- certbot
+- nginx HTTPS termination
+
+現在の PoC 構成では、Private GitLab Host 側 GitLab は自己署名証明書を使用している。
+
+そのため nginx 設定では以下を使用している。
+
+```nginx
+proxy_ssl_verify off;
+```
+
+本番運用では以下への移行を推奨する。
+
+- 独自 CA
+- Let's Encrypt
+- CA 配布
+- certificate pinning
+
+## 13. WireGuard 設定
+
+WireGuard 設定は Public Gateway Host と Private GitLab Host の両方に必要である。
+
+本章では、WireGuard peer 間の VPN 接続を構成し、Public Gateway Host から Private GitLab Host の WireGuard IP へ疎通できることを確認する。
+
+初期設計では、以下の WireGuard IP を使用する。
+
+| 名称 | WireGuard IP |
+| --- | --- |
+| Public Gateway Host | 10.20.30.1/24 |
+| Private GitLab Host | 10.20.30.2/24 |
+
+## 13.1 WireGuard インストール確認
+
+Public Gateway Host と Private GitLab Host の両方で実行する。
+
+```bash
+wg --version
+systemctl status wg-quick@wg0 --no-pager
+```
+
+`wg-quick@wg0` が未作成または inactive でも、この時点では問題ない。
+
+## 13.2 設定例の取得
+
+Public Gateway Host と Private GitLab Host の両方で実行する。
+
+```bash
+cd /opt/local-gitlab-gateway
+git pull origin develop
+ls -l deploy/wireguard/
+```
+
+期待する設定例:
+
+```text
+public-gateway-wg0.conf.example
+private-gitlab-wg0.conf.example
+```
+
+## 13.3 鍵保存ディレクトリ作成
+
+Public Gateway Host と Private GitLab Host の両方で実行する。
+
+```bash
+sudo mkdir -p /etc/wireguard
+sudo chmod 700 /etc/wireguard
+```
+
+## 13.4 Public Gateway Host の鍵生成
+
+Public Gateway Host で実行する。
+
+```bash
+wg genkey | sudo tee /etc/wireguard/public-gateway-private.key | wg pubkey | sudo tee /etc/wireguard/public-gateway-public.key
+sudo chmod 600 /etc/wireguard/public-gateway-private.key
+sudo chmod 644 /etc/wireguard/public-gateway-public.key
+```
+
+公開鍵を表示する。
+
+```bash
+sudo cat /etc/wireguard/public-gateway-public.key
+```
+
+この公開鍵は Private GitLab Host の設定で使用する。
+
+秘密鍵は外部へ共有してはならない。
+
+## 13.5 Private GitLab Host の鍵生成
+
+Private GitLab Host で実行する。
+
+```bash
+wg genkey | sudo tee /etc/wireguard/private-gitlab-private.key | wg pubkey | sudo tee /etc/wireguard/private-gitlab-public.key
+sudo chmod 600 /etc/wireguard/private-gitlab-private.key
+sudo chmod 644 /etc/wireguard/private-gitlab-public.key
+```
+
+公開鍵を表示する。
+
+```bash
+sudo cat /etc/wireguard/private-gitlab-public.key
+```
+
+この公開鍵は Public Gateway Host の設定で使用する。
+
+秘密鍵は外部へ共有してはならない。
+
+## 13.6 Public Gateway Host の wg0.conf 作成
+
+Public Gateway Host で実行する。
+
+```bash
+sudo cp \
+  /opt/local-gitlab-gateway/deploy/wireguard/public-gateway-wg0.conf.example \
+  /etc/wireguard/wg0.conf
+```
+
+設定ファイルを編集する。
+
+```bash
+sudo nano /etc/wireguard/wg0.conf
+```
+
+置換する値:
+
+```text
+<PUBLIC_GATEWAY_PRIVATE_KEY>
+<PRIVATE_GITLAB_PUBLIC_KEY>
+```
+
+秘密鍵は以下で確認する。
+
+```bash
+sudo cat /etc/wireguard/public-gateway-private.key
+```
+
+Private GitLab Host の公開鍵は、13.5 で表示した値を使用する。
+
+編集後、権限を設定する。
+
+```bash
+sudo chmod 600 /etc/wireguard/wg0.conf
+```
+
+## 13.7 Private GitLab Host の wg0.conf 作成
+
+Private GitLab Host で実行する。
+
+```bash
+sudo cp \
+  /opt/local-gitlab-gateway/deploy/wireguard/private-gitlab-wg0.conf.example \
+  /etc/wireguard/wg0.conf
+```
+
+設定ファイルを編集する。
+
+```bash
+sudo nano /etc/wireguard/wg0.conf
+```
+
+置換する値:
+
+```text
+<PRIVATE_GITLAB_PRIVATE_KEY>
+<PUBLIC_GATEWAY_PUBLIC_KEY>
+<PUBLIC_GATEWAY_HOST>
+```
+
+秘密鍵は以下で確認する。
+
+```bash
+sudo cat /etc/wireguard/private-gitlab-private.key
+```
+
+Public Gateway Host の公開鍵は、13.4 で表示した値を使用する。
+
+`<PUBLIC_GATEWAY_HOST>` には Public Gateway Host の IP アドレスまたはドメインを指定する。
+
+編集後、権限を設定する。
+
+```bash
+sudo chmod 600 /etc/wireguard/wg0.conf
+```
+
+## 13.8 WireGuard 起動
+
+Public Gateway Host と Private GitLab Host の両方で実行する。
+
+```bash
+sudo systemctl enable wg-quick@wg0
+sudo systemctl start wg-quick@wg0
+```
+
+状態を確認する。
+
+```bash
+systemctl status wg-quick@wg0 --no-pager
+sudo wg show
+ip addr show wg0
+```
+
+## 13.9 疎通確認
+
+Public Gateway Host から Private GitLab Host の WireGuard IP へ疎通確認する。
+
+```bash
+ping -c 3 10.20.30.2
+```
+
+Private GitLab Host から Public Gateway Host の WireGuard IP へ疎通確認する。
+
+```bash
+ping -c 3 10.20.30.1
+```
+
+## 13.10 Private Bridge Agent への WireGuard 経由確認
+
+Private Bridge Agent が `0.0.0.0:8081` で listen している場合、Public Gateway Host から以下で確認する。
+
+```bash
+curl -i http://10.20.30.2:8081/internal/health
+```
+
+期待結果:
+
+```text
+HTTP/1.1 200 OK
+```
+
+期待 JSON:
+
+```json
+{
+  "status": "ok",
+  "request_id": "req_xxxxx"
+}
+```
+
+## 13.11 WireGuard 起動失敗時の確認
+
+起動に失敗した場合は、以下を確認する。
+
+```bash
+systemctl status wg-quick@wg0 --no-pager
+journalctl -u wg-quick@wg0 -n 100 --no-pager
+sudo wg show
+```
+
+設定ファイルに未置換の placeholder が残っていないか確認する。
+
+```bash
+sudo grep -n '<.*>' /etc/wireguard/wg0.conf
+```
+
+ポート待受を確認する。
+
+```bash
+sudo ss -lunp | grep 51820
+```
+
+Public Gateway Host 側で 51820/udp が firewall またはクラウド側のセキュリティ設定により許可されていることを確認する。
+
+## 13.12 WireGuard 停止・再起動
+
+停止する場合:
+
+```bash
+sudo systemctl stop wg-quick@wg0
+```
+
+再起動する場合:
+
+```bash
+sudo systemctl restart wg-quick@wg0
+```
+
+自動起動を無効化する場合:
+
+```bash
+sudo systemctl disable wg-quick@wg0
+```
+
+## 14. runtime 設定ファイル作成
+
+runtime 設定ファイルは、Git 管理対象外の実行環境用設定である。
+
+本章は、Public Gateway Service から Private Bridge Agent へ接続するための設定、および Private Bridge Agent から Managed GitLab へ接続するための設定を作成する。
+
+## 14.1 Public Gateway Host の runtime 設定
+
+Public Gateway Host で実行する。
+
+```bash
+cd /opt/local-gitlab-gateway
+git pull origin develop
+mkdir -p runtime/public_gateway
+cp config/public_gateway/config.example.yaml runtime/public_gateway/config.yaml
+chmod 600 runtime/public_gateway/config.yaml
+```
+
+設定ファイルを編集する。
+
+```bash
+nano runtime/public_gateway/config.yaml
+```
+
+編集対象:
+
+```yaml
+security:
+  api_key: CHANGE_ME_PUBLIC_API_KEY
+
+private_bridge:
+  base_url: http://10.20.30.2:8081
+  timeout_seconds: 30
+  internal_api_key: CHANGE_ME_INTERNAL_API_KEY
+```
+
+`api_key` には ChatGPT または外部クライアントから Public Gateway Service へ接続するための API Key を設定する。
+
+`private_bridge.internal_api_key` には、Private Bridge Agent 側の `security.internal_api_key` と同じ値を設定する。
+
+確認する。
+
+```bash
+cat runtime/public_gateway/config.yaml
+```
+
+## 14.2 Private GitLab Host の runtime 設定
+
+Private GitLab Host で実行する。
+
+```bash
+cd /opt/local-gitlab-gateway
+git pull origin develop
+mkdir -p runtime/private_bridge
+cp config/private_bridge/config.example.yaml runtime/private_bridge/config.yaml
+chmod 600 runtime/private_bridge/config.yaml
+```
+
+設定ファイルを編集する。
+
+```bash
+nano runtime/private_bridge/config.yaml
+```
+
+編集対象:
+
+```yaml
+security:
+  internal_api_key: CHANGE_ME_INTERNAL_API_KEY
+
+gitlab:
+  base_url: http://127.0.0.1
+  personal_access_token: CHANGE_ME_GITLAB_PAT
+```
+
+`security.internal_api_key` には、Public Gateway Host 側の `private_bridge.internal_api_key` と同じ値を設定する。
+
+`gitlab.personal_access_token` には Managed GitLab の Personal Access Token を設定する。
+
+確認する。
+
+```bash
+cat runtime/private_bridge/config.yaml
+```
+
+## 14.3 runtime 設定ファイルの注意事項
+
+以下をリポジトリへ commit してはならない。
+
+- `runtime/public_gateway/config.yaml`
+- `runtime/private_bridge/config.yaml`
+- 実 API Key
+- GitLab Personal Access Token
+
+runtime 設定ファイルを表示する場合は、画面共有やログ保存に注意する。
+
+## 14.4 runtime 設定反映
+
+現時点の実装では、runtime 設定ファイルの読み込みは後続工程で実装する。
+
+設定ファイル作成後、後続工程でサービスを再起動して反映する。
+
+## 15. 段階的な確認ポイント
+
+| 段階 | 確認内容 | 対象 |
+| --- | --- | --- |
+| STEP-01 | SSH 接続できる | 両方 |
+| STEP-02 | パッケージ導入済み | 両方 |
+| STEP-03 | `/opt/local-gitlab-gateway` が存在する | 両方 |
+| STEP-04 | develop ブランチを取得できる | 両方 |
+| STEP-05 | Python 仮想環境を作成できる | 両方 |
+| STEP-06 | Public Gateway Service が localhost で起動する | Public Gateway Host |
+| STEP-07 | Private Bridge Agent が localhost で起動する | Private GitLab Host |
+| STEP-08 | systemd で自動起動できる | 両方 |
+| STEP-09 | nginx 経由で `/health` に到達できる | Public Gateway Host |
+| STEP-10 | WireGuard peer 間で疎通できる | 両方 |
+| STEP-11 | runtime 設定ファイルを作成できる | 両方 |
+| STEP-12 | Public Gateway Service から Private Bridge Agent に到達できる | 両方 |
+| STEP-13 | Private Bridge Agent から Managed GitLab に到達できる | Private GitLab Host |
+
+## 16. 現時点の作業範囲
+
+現時点で実装済みの確認対象は以下のみである。
+
+- Public Gateway Service `/health`
+- Private Bridge Agent `/internal/health`
+- request_id 発行
+- X-Request-ID ヘッダ
+- systemd unit example
+- nginx reverse proxy example
+- WireGuard 設定例
+- runtime 設定ファイル例
+
+以下は未実装である。
+
+- runtime 設定ファイル読み込み
+- API Key 認証
+- Public Gateway Service から Private Bridge Agent への転送
+- GitLab API client
+- HTTPS 設定例
+
+## 17. 次に作成する手順
+
+次に以下を作成する。
+
+- Public Gateway Service 単体確認手順
+- Private Bridge Agent 単体確認手順
+- HTTPS 化手順
+
+---
+
+[目次](../目次.md) > 運用手順 > [運用手順目次](./運用手順目次.md) > Public Gateway Host 構築

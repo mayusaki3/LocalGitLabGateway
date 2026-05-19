@@ -7,7 +7,7 @@ document_type: note
 canonical_document: true
 -->
 
-[目次](../目次.md) > 運用 > [運用目次](./運用目次.md) > GitLab Reverse Proxy
+[目次](../目次.md) > 運用手順 > [運用手順目次](./運用手順目次.md) > GitLab Reverse Proxy
 
 # GitLab Reverse Proxy
 
@@ -16,13 +16,13 @@ canonical_document: true
 GitLab の subpath 構成を使用する。
 
 ```ruby
-external_url "https://<PRIVATE_GITLAB_HOST>/gitlab"
+external_url "https://（ローカルGitLab運用ホスト名）/gitlab"
 ```
 
 ## login URL
 
 ```text
-http://<PUBLIC_SERVER_IP>/gitlab/users/sign_in
+http://（インターネットに公開しているホスト名）/gitlab/users/sign_in
 ```
 
 ## 現在の問題
@@ -64,4 +64,4 @@ curl -i http://127.0.0.1/gitlab/users/sign_in
 
 ---
 
-[目次](../目次.md) > 運用 > [運用目次](./運用目次.md) > GitLab Reverse Proxy
+[目次](../目次.md) > 運用手順 > [運用手順目次](./運用手順目次.md) > GitLab Reverse Proxy

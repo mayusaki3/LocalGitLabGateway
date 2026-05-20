@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name PUBLIC_GATEWAY_HOST_EXAMPLE;
+    server_name <PUBLIC_GATEWAY_HOST>;
 
     access_log /var/log/nginx/local-gitlab-gateway.access.log;
     error_log /var/log/nginx/local-gitlab-gateway.error.log;
@@ -29,7 +29,7 @@ server {
     # GitLab HTTPS Reverse Proxy
     #
     location /gitlab/ {
-        proxy_pass https://GITLAB_INTERNAL_ADDR_EXAMPLE/gitlab/;
+        proxy_pass https://<GITLAB_INTERNAL_ADDR>/gitlab/;
 
         #
         # Current PoC uses self-signed certificate.
@@ -38,7 +38,7 @@ server {
 
         proxy_http_version 1.1;
 
-        proxy_set_header Host GITLAB_INTERNAL_HOST_EXAMPLE;
+        proxy_set_header Host <GITLAB_INTERNAL_HOST>;
 
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

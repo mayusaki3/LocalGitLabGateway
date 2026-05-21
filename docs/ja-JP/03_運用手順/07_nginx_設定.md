@@ -46,16 +46,47 @@ Public Host 上へ配置済みであること。
 
 # 3. 開発版を使用する場合
 
-Public Host 上で：
+Public Host 上で、develop ブランチを利用する場合のみ実施する。
 
 ```bash
 cd /opt/local-gitlab-gateway
 
 git checkout develop
-git pull
+git fetch origin
+git status
 ```
 
-develop ブランチを利用する場合のみ実施する。
+---
+
+## 3.1 fast-forward 可能な場合
+
+Public Host 側に保存すべきローカル commit がなく、fast-forward 可能な場合は以下を実行する。
+
+```bash
+git pull --ff-only
+```
+
+---
+
+## 3.2 develop が分岐している場合
+
+`git status` で以下のように表示される場合は、Public Host 側の develop が origin/develop と分岐している。
+
+```text
+Your branch and 'origin/develop' have diverged
+```
+
+Public Host 側のローカル commit を保持する必要がない場合のみ、以下で origin/develop に合わせる。
+
+```bash
+git reset --hard origin/develop
+```
+
+注意：
+
+- `git reset --hard` は追跡済みファイルのローカル変更を破棄する。
+- `runtime/` などの未追跡ファイルは削除しない。
+- ローカル commit を保持する必要がある場合は、この手順を実施せず、別途退避・比較を行う。
 
 ---
 
@@ -66,6 +97,8 @@ develop ブランチを利用する場合のみ実施する。
 Public Host 上で：
 
 ```bash
+cd /opt/local-gitlab-gateway
+
 sudo cp \
   deploy/nginx/local-gitlab-gateway.conf.example \
   /etc/nginx/sites-available/local-gitlab-gateway.conf
@@ -73,9 +106,19 @@ sudo cp \
 
 ---
 
-## 4.2 プレースホルダー置換
+## 4.2 設定ファイル編集
 
-以下を実環境値へ置換。
+以下を実行して、nginx 設定ファイルを開く。
+
+```bash
+sudo nano /etc/nginx/sites-available/local-gitlab-gateway.conf
+```
+
+---
+
+## 4.3 プレースホルダー置換
+
+以下を実環境値へ置換する。
 
 ```text
 <PUBLIC_GATEWAY_HOST>
@@ -85,14 +128,17 @@ sudo cp \
 
 ---
 
-## 4.3 確認
+## 4.4 確認
 
-以下を確認。
+以下を確認する。
 
 - GitLab internal address
 - GitLab internal host
 - proxy_pass trailing slash
 - /gitlab prefix
+- X-Forwarded-Ssl
+- X-Forwarded-Host
+- X-Forwarded-Prefix
 
 ---
 

@@ -37,20 +37,25 @@ GitLab
 
 ---
 
-## 2.2 関連ドキュメント
+## 2.2 repository 配置
 
-- [GitLab Reverse Proxy](09_GitLab_ReverseProxy.md)
+LocalGitLabGateway repository が
+Public Host 上へ配置済みであること。
 
 ---
 
-# 3. develop 更新取得
+# 3. 開発版を使用する場合
 
-Windows PC 上で：
+Public Host 上で：
 
 ```bash
+cd /opt/local-gitlab-gateway
+
 git checkout develop
 git pull
 ```
+
+develop ブランチを利用する場合のみ実施する。
 
 ---
 
@@ -73,9 +78,9 @@ sudo cp \
 以下を実環境値へ置換。
 
 ```text
-PUBLIC_GATEWAY_HOST_EXAMPLE
-GITLAB_INTERNAL_ADDR_EXAMPLE
-GITLAB_INTERNAL_HOST_EXAMPLE
+<PUBLIC_GATEWAY_HOST>
+<GITLAB_INTERNAL_ADDR>
+<GITLAB_INTERNAL_HOST>
 ```
 
 ---
@@ -188,7 +193,7 @@ curl -i http://127.0.0.1/api/health
 ブラウザで以下へアクセス。
 
 ```text
-http://PUBLIC_GATEWAY_HOST_EXAMPLE/gitlab/users/sign_in
+http://<PUBLIC_GATEWAY_HOST>/gitlab/users/sign_in
 ```
 
 ---
@@ -314,6 +319,12 @@ docs を正本
 ```
 
 であることを検証対象とする。
+
+---
+
+# 関連ドキュメント
+
+- [GitLab Reverse Proxy](09_GitLab_ReverseProxy.md)
 
 ---
 

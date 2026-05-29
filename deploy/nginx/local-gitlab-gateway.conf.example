@@ -2,6 +2,16 @@ server {
     listen 80;
     server_name <PUBLIC_GATEWAY_HOST>;
 
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name <PUBLIC_GATEWAY_HOST>;
+
+    ssl_certificate /etc/nginx/ssl/local-gitlab-gateway.crt;
+    ssl_certificate_key /etc/nginx/ssl/local-gitlab-gateway.key;
+
     access_log /var/log/nginx/local-gitlab-gateway.access.log;
     error_log /var/log/nginx/local-gitlab-gateway.error.log;
 
@@ -17,7 +27,8 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Ssl on;
         proxy_set_header X-Request-ID $request_id;
 
         proxy_connect_timeout 30s;
@@ -38,7 +49,7 @@ server {
         proxy_pass https://10.20.30.2/gitlab/;
 
         #
-        # Current PoC uses self-signed certificate.
+        # Current internal GitLab uses self-signed or internal CA certificate.
         #
         proxy_ssl_verify off;
 

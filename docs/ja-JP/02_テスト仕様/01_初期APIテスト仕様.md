@@ -1,3 +1,12 @@
+<!--
+HLDocS:LLM-MANAGED
+doc_id: doc-20261013-110000Z-LGG-API-TEST
+lang: ja-JP
+canonical_title: 初期APIテスト仕様
+document_type: testspec
+canonical_document: true
+-->
+
 [目次](../目次.md) > テスト仕様 > 初期APIテスト仕様
 
 # 初期APIテスト仕様
@@ -156,6 +165,55 @@
 - GitLab API は単体テストではモック化する
 - 実 GitLab 接続は結合テストでのみ実施する
 - 実トークンをテストログへ出力しない
+
+## 11. API 契約整合テスト（2026-10-13 確定方針）
+
+本節は既存テスト番号を維持した追加テストである。実装に先立って期待動作を定義する。
+
+### 11.1 公開・内部 API パス
+
+| テスト番号 | テスト名 | 期待結果 |
+| --- | --- | --- |
+| UT-PG-PATH-001 | 公開 Project List パス | GET `/api/v1/projects` にルートが登録される |
+| UT-PG-PATH-002 | 公開 Branch List パス | GET `/api/v1/projects/{project_id}/branches` にルートが登録される |
+| UT-PG-PATH-003 | 公開 File Get パス | GET `/api/v1/projects/{project_id}/files/{file_path}` にルートが登録される |
+| UT-PG-PATH-004 | 公開 File Create/Update パス | POST/PUT の両メソッドが公開API仕様どおりに登録される |
+| UT-PG-PATH-005 | 公開 MR/Issue 作成パス | POST の両エンドポイントが公開API仕様どおりに登録される |
+| UT-PB-PATH-001 | 内部 API パス | 上記各操作に対応する `/internal/api/v1/projects` 以下のルートが登録される |
+
+### 11.2 Bearer 認証
+
+| テスト番号 | テスト名 | 期待結果 |
+| --- | --- | --- |
+| UT-PG-AUTH-005 | 公開 Bearer 認証成功 | `Authorization: Bearer <API_KEY>` で認証成功する |
+| UT-PG-AUTH-006 | 公開独自ヘッダー単独 | `X-API-Key` のみでは認証できない |
+| UT-PB-AUTH-004 | 内部 Bearer 認証成功 | `Authorization: Bearer <INTERNAL_API_KEY>` で認証成功する |
+| UT-PB-AUTH-005 | 内部独自ヘッダー単独 | `X-Internal-API-Key` のみでは認証できない |
+| UT-PB-AUTH-006 | 内部 Authorization scheme 不正 | Bearer 以外の scheme を拒否する |
+
+### 11.3 正規化レスポンス
+
+| テスト番号 | テスト名 | 期待結果 |
+| --- | --- | --- |
+| UT-PG-RESP-001 | Project List 正規化 | トップレベルに `request_id` と `projects` が存在する |
+| UT-PG-RESP-002 | 内部ラッパー非露出 | 公開レスポンスに `private_bridge` フィールドが存在しない |
+| UT-PG-RESP-003 | エラー形式 | 異常応答に `request_id` と `error.code` / `error.message` が存在する |
+| UT-PB-RESP-001 | 内部 Project List 正規化 | トップレベルに `request_id` と `projects` が存在する |
+
+### 11.4 request_id の一貫性
+
+| テスト番号 | テスト名 | 期待結果 |
+| --- | --- | --- |
+| UT-PG-REQ-004 | 正常応答の ID 一致 | Public 発行 ID が内部要求・内部応答・公開応答で一致する |
+| UT-PG-REQ-005 | エラー応答の ID 一致 | 内部処理失敗時も公開応答に同一 ID が含まれる |
+| UT-PB-REQ-001 | Private Bridge の ID 維持 | 内部要求の ID を別IDに置き換えない |
+| IT-PG-PB-005 | 監査ログの ID 一致 | 両サービスの監査ログで同一 ID を確認できる |
+
+### 11.5 留保事項
+
+- request_id の転送媒体・形式、直接アクセス時の扱い、旧APIパスの互換性は別途設計で確定する。
+- 上記ケースはテスト仕様であり、実行済み・合格を意味しない。
+- カバレッジ100%の目標は第9節に従う。
 
 ---
 

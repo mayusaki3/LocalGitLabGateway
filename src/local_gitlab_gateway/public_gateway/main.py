@@ -25,9 +25,13 @@ from local_gitlab_gateway.public_gateway.private_bridge_repository_tree import (
     fetch_repository_tree_via_private_bridge,
 )
 
+from local_gitlab_gateway.public_gateway.tunnel_endpoint import router as tunnel_router
+
 runtime_config = load_public_gateway_config()
 
 app = FastAPI(title="LocalGitLabGateway Public Gateway")
+app.include_router(tunnel_router)
+app.state.tunnel_token = runtime_config.get("tunnel", {}).get("token", "")
 
 app.add_middleware(Utf8JsonMiddleware)
 

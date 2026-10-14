@@ -5,10 +5,10 @@ from pydantic import ValidationError
 
 from local_gitlab_gateway.common.tunnel_auth import is_valid_tunnel_bearer
 from local_gitlab_gateway.common.tunnel_protocol import TunnelResponse
-from local_gitlab_gateway.common.tunnel_session import TunnelSession
+from local_gitlab_gateway.common.tunnel_relay import TunnelRelay
 
 router = APIRouter()
-session = TunnelSession()
+session = TunnelRelay()
 
 
 @router.websocket("/internal/tunnel/v1")
@@ -29,11 +29,11 @@ async def tunnel_ingress(websocket: WebSocket) -> None:
         while True:
             payload = await websocket.receive_json()
             try:
-                TunnelResponse.model_validate(payload)
+                session.resolve(payload)
             except ValidationError:
                 await websocket.close(code=1008)
                 break
-            # No request dispatcher is connected yet; responses are not processed.
+            # Responses are delivered only to matching outstanding requests.
     except WebSocketDisconnect:
         pass
     finally:

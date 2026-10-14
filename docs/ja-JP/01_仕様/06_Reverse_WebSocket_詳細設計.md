@@ -73,6 +73,30 @@ canonical_document: true
 - systemd管理操作と有効化状態の永続化方針。
 - 旧WireGuard配備資料の廃止・移行範囲。
 
+
+## 9. 初期プロトコル確定値
+
+- WSSパス: `/internal/tunnel/v1`。公開GitLab APIとルートを分離する。
+- トンネル接続認証: 専用 `Authorization: Bearer <TUNNEL_TOKEN>`。Public API Key、Internal API Keyと別の秘密値とし、固定時間比較で照合する。資格情報をURLクエリに含めない。
+- WebSocketサブプロトコル: `lgg-tunnel.v1`。未対応のバージョンは接続を拒否する。
+- JSONメッセージ形式: UTF-8、1フレーム1メッセージ、厳格なスキーマ検証、未知のtypeを拒否する。
+- `request`: `{"type":"request","request_id":"req_...","method":"GET","path":"/internal/api/v1/projects","query":{},"body":null}`。
+- `response`: `{"type":"response","request_id":"req_...","status_code":200,"body":{"request_id":"req_...","projects":[]}}`。
+- `request_id` は `req_` で始まる識別子であり、同時実行中の要求で重複してはならない。応答body内のIDも外側と一致させる。
+- `path` は相対パスのみ許可し、スキーム・ホスト・フラグメント・パス走査を拒否する。HTTPメソッドと内部APIのパスは個別に許可リストで制限する。
+- トンネル未接続時は公開APIで `503` と `error.code=tunnel_unavailable` を返す。接続中の応答期限超過は `504` と `error.code=tunnel_timeout` を返す。いずれも `request_id` を含める。
+- 要求期限は初期値30秒。同時WSS接続は初期値1本。異常切断時の再接続は有効化中に限り指数バックオフ（初回1秒、最大30秒）とする。
+- WSS接続を閉じた際は保留中の要求をすべて終了する。特に書き込み要求は自動再送しない。
+- systemdサービスは初期状態で無効（自動起動禁止）とし、利用開始・終了時にFW内管理者が手動で開始・停止する。サービス起動中のみ再接続を許可する。
+
+## 10. 初期実装の分割
+
+1. メッセージスキーマ・認証・許可リストの単体テストと実装。
+2. FW内ローカル構成でWSS受入口・クライアントを実装し、要求対応付けと切断処理を結合テスト。
+3. Public Gatewayの既存HTTP中継をWSS中継へ切り替え、公開API契約の整合性をテスト。
+4. nginx・systemdの設定を追加し、内部環境、本番Ubuntu、ChatGPTの順で検証する。
+
+
 本書は設計文書であり、実装・テスト合格を示すものではない。
 
 ---

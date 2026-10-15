@@ -19,20 +19,18 @@ def client() -> TestClient:
 
 
 def test_missing_credential_rejected(client: TestClient) -> None:
-    with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect(
-            "/internal/tunnel/v1", subprotocols=["lgg-tunnel.v1"]
-        ):
-            pass
+    with pytest.raises(WebSocketDisconnect), client.websocket_connect(
+        "/internal/tunnel/v1", subprotocols=["lgg-tunnel.v1"]
+    ):
+        pass
 
 
 def test_wrong_subprotocol_rejected(client: TestClient) -> None:
-    with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect(
-            "/internal/tunnel/v1",
-            headers={"Authorization": "Bearer test-tunnel-only-secret"},
-        ):
-            pass
+    with pytest.raises(WebSocketDisconnect), client.websocket_connect(
+        "/internal/tunnel/v1",
+        headers={"Authorization": "Bearer test-tunnel-only-secret"},
+    ):
+        pass
 
 
 def test_authenticated_connection_and_invalid_message(client: TestClient) -> None:

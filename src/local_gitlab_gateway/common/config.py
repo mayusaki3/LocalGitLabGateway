@@ -1,11 +1,10 @@
 """Runtime configuration loaders."""
 
+import os
 from pathlib import Path
 from typing import Any
-import os
 
 import yaml
-
 
 PUBLIC_GATEWAY_CONFIG_PATH = Path(
     "/opt/local-gitlab-gateway/runtime/public_gateway/config.yaml",

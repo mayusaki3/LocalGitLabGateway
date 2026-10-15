@@ -6,7 +6,6 @@ from hmac import compare_digest
 from fastapi import Request
 from starlette.responses import JSONResponse, Response
 
-
 PUBLIC_EXCLUDED_PATHS = {
     "/health",
 }

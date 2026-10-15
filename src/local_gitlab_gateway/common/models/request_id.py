@@ -6,7 +6,6 @@ Public Gateway Service and Private Bridge Agent.
 
 from uuid import uuid4
 
-
 REQUEST_ID_PREFIX = "req_"
 
 

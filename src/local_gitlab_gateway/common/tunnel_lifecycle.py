@@ -1,10 +1,10 @@
 """Operator-controlled lifecycle for an outbound WebSocket tunnel."""
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class TunnelState(str, Enum):
+class TunnelState(StrEnum):
     DISABLED = "disabled"
     CONNECTING = "connecting"
     CONNECTED = "connected"

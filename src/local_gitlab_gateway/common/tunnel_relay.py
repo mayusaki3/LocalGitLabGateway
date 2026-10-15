@@ -56,7 +56,7 @@ class TunnelRelay:
             body=body,
         )
         if self.socket is None:
-            raise TunnelDisconnected("Tunnel unavailable")
+            raise TunnelDisconnectedError("Tunnel unavailable")
         if request_id in self.pending:
             raise ValueError("Duplicate pending request_id")
         loop = asyncio.get_running_loop()
@@ -65,7 +65,7 @@ class TunnelRelay:
         try:
             async with self.send_lock:
                 if self.socket is None:
-                    raise TunnelDisconnected("Tunnel disconnected")
+                    raise TunnelDisconnectedError("Tunnel disconnected")
                 await self.socket.send_json(message.model_dump())
             try:
                 return await asyncio.wait_for(future, timeout=self.timeout)

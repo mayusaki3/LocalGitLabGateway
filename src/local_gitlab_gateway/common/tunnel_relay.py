@@ -21,6 +21,10 @@ class TunnelRelay:
         self.pending: dict[str, asyncio.Future[TunnelResponse]] = {}
         self.send_lock = asyncio.Lock()
 
+    @property
+    def connected(self) -> bool:
+        return self.socket is not None
+
     def attach(self, socket: Any) -> bool:
         if self.socket is not None:
             return False
@@ -65,7 +69,7 @@ class TunnelRelay:
                 await self.socket.send_json(message.model_dump())
             try:
                 return await asyncio.wait_for(future, timeout=self.timeout)
-            except asyncio.TimeoutError as exc:
+            except TimeoutError as exc:
                 raise TunnelTimeout("Tunnel request timed out") from exc
         finally:
             self.pending.pop(request_id, None)

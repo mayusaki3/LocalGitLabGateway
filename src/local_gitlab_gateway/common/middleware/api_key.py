@@ -1,6 +1,7 @@
 """API key middleware."""
 
 from collections.abc import Awaitable, Callable
+from hmac import compare_digest
 
 from fastapi import Request
 from starlette.responses import JSONResponse, Response
@@ -37,9 +38,10 @@ async def public_api_key_middleware(
             },
         )
 
-    provided_api_key = request.headers.get("X-API-Key")
+    provided_api_key = request.headers.get("Authorization", "")
+    provided_api_key = provided_api_key.removeprefix("Bearer ") if provided_api_key.startswith("Bearer ") else ""
 
-    if provided_api_key != expected_api_key:
+    if not provided_api_key or not compare_digest(provided_api_key, expected_api_key):
         return JSONResponse(
             status_code=401,
             content={
@@ -73,7 +75,8 @@ async def internal_api_key_middleware(
             },
         )
 
-    provided_api_key = request.headers.get("X-Internal-API-Key")
+    provided_api_key = request.headers.get("Authorization", "")
+    provided_api_key = provided_api_key.removeprefix("Bearer ") if provided_api_key.startswith("Bearer ") else ""
 
     if provided_api_key != expected_api_key:
         return JSONResponse(

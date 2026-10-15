@@ -15,6 +15,7 @@ from local_gitlab_gateway.common.middleware.request_id import request_id_middlew
 from local_gitlab_gateway.common.middleware.utf8_json import (
     Utf8JsonMiddleware,
 )
+from local_gitlab_gateway.private_bridge.canonical_projects import router as canonical_router
 from local_gitlab_gateway.private_bridge.gitlab_client import (
     fetch_gitlab_version,
 )
@@ -31,6 +32,7 @@ from local_gitlab_gateway.private_bridge.gitlab_repository_tree import (
 runtime_config = load_private_bridge_config()
 
 app = FastAPI(title="LocalGitLabGateway Private Bridge")
+app.include_router(canonical_router)
 
 app.add_middleware(Utf8JsonMiddleware)
 

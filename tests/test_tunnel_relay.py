@@ -5,9 +5,9 @@ import asyncio
 import pytest
 
 from local_gitlab_gateway.common.tunnel_relay import (
-    TunnelDisconnected,
+    TunnelDisconnectedError,
     TunnelRelay,
-    TunnelTimeout,
+    TunnelTimeoutError,
 )
 
 
@@ -40,7 +40,7 @@ async def test_correlate_response() -> None:
 
 @pytest.mark.asyncio
 async def test_no_connection() -> None:
-    with pytest.raises(TunnelDisconnected):
+    with pytest.raises(TunnelDisconnectedError):
         await TunnelRelay().request("req_one", "GET", "/internal/api/v1/projects")
 
 
@@ -48,7 +48,7 @@ async def test_no_connection() -> None:
 async def test_timeout_drops_pending_request() -> None:
     relay = TunnelRelay(timeout=0.001)
     relay.attach(FakeSocket())
-    with pytest.raises(TunnelTimeout):
+    with pytest.raises(TunnelTimeoutError):
         await relay.request("req_one", "GET", "/internal/api/v1/projects")
     assert not relay.pending
 
@@ -63,7 +63,7 @@ async def test_disconnect_fails_pending_request() -> None:
     )
     await asyncio.sleep(0)
     relay.detach(socket)
-    with pytest.raises(TunnelDisconnected):
+    with pytest.raises(TunnelDisconnectedError):
         await task
 
 

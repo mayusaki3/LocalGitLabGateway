@@ -3,9 +3,9 @@
 This module provides the FastAPI application for the private bridge agent.
 """
 
-from fastapi import FastAPI, HTTPException, Query, Request
 import httpx
 import uvicorn
+from fastapi import FastAPI, HTTPException, Query, Request
 
 from local_gitlab_gateway.common.config import load_private_bridge_config
 from local_gitlab_gateway.common.middleware.api_key import (

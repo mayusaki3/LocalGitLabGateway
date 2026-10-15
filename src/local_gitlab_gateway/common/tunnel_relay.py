@@ -73,6 +73,8 @@ class TunnelRelay:
                 raise TunnelTimeoutError("Tunnel request timed out") from exc
         finally:
             self.pending.pop(request_id, None)
+            if future.done() and not future.cancelled():
+                future.exception()
 
     def resolve(self, payload: dict[str, Any]) -> bool:
         response = TunnelResponse.model_validate(payload)

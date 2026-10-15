@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 
 from local_gitlab_gateway.common.request_id import generate_request_id
-from local_gitlab_gateway.common.tunnel_relay import TunnelDisconnected, TunnelTimeout
+from local_gitlab_gateway.common.tunnel_relay import TunnelDisconnectedError, TunnelTimeoutError
 from local_gitlab_gateway.public_gateway.tunnel_endpoint import session
 
 router = APIRouter()
@@ -25,14 +25,14 @@ async def list_projects(
             "/internal/api/v1/projects",
             query={"page": page, "per_page": per_page},
         )
-    except TunnelDisconnected:
+    except TunnelDisconnectedError:
         return JSONResponse(
             status_code=503,
             content={"request_id": request_id,
                      "error": {"code": "tunnel_unavailable",
                                "message": "Tunnel unavailable"}},
         )
-    except TunnelTimeout:
+    except TunnelTimeoutError:
         return JSONResponse(
             status_code=504,
             content={"request_id": request_id,

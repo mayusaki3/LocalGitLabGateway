@@ -6,11 +6,11 @@ from typing import Any
 from local_gitlab_gateway.common.tunnel_protocol import TunnelRequest, TunnelResponse
 
 
-class TunnelDisconnected(RuntimeError):
+class TunnelDisconnectedError(RuntimeError):
     """No usable tunnel connection."""
 
 
-class TunnelTimeout(RuntimeError):
+class TunnelTimeoutError(RuntimeError):
     """No response arrived before the deadline."""
 
 
@@ -37,7 +37,7 @@ class TunnelRelay:
         self.socket = None
         for future in self.pending.values():
             if not future.done():
-                future.set_exception(TunnelDisconnected("Tunnel disconnected"))
+                future.set_exception(TunnelDisconnectedError("Tunnel disconnected"))
         self.pending.clear()
 
     async def request(
@@ -70,7 +70,7 @@ class TunnelRelay:
             try:
                 return await asyncio.wait_for(future, timeout=self.timeout)
             except TimeoutError as exc:
-                raise TunnelTimeout("Tunnel request timed out") from exc
+                raise TunnelTimeoutError("Tunnel request timed out") from exc
         finally:
             self.pending.pop(request_id, None)
 

@@ -24,7 +24,12 @@ async def request_id_middleware(
         Response: HTTP response with request ID header.
     """
 
-    request_id = generate_request_id()
+    incoming_id = request.headers.get("X-Request-ID", "")
+    # Only the internal bridge accepts the ID assigned by the public gateway.
+    if request.url.path.startswith("/internal/") and incoming_id.startswith("req_"):
+        request_id = incoming_id
+    else:
+        request_id = generate_request_id()
 
     request.state.request_id = request_id
 

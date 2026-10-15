@@ -3,9 +3,9 @@
 This module provides the FastAPI application for the public gateway.
 """
 
-from fastapi import FastAPI, HTTPException, Query, Request
 import httpx
 import uvicorn
+from fastapi import FastAPI, HTTPException, Query, Request
 
 from local_gitlab_gateway.common.config import load_public_gateway_config
 from local_gitlab_gateway.common.middleware.api_key import (
@@ -24,9 +24,8 @@ from local_gitlab_gateway.public_gateway.private_bridge_repository_file import (
 from local_gitlab_gateway.public_gateway.private_bridge_repository_tree import (
     fetch_repository_tree_via_private_bridge,
 )
-
-from local_gitlab_gateway.public_gateway.tunnel_endpoint import router as tunnel_router
 from local_gitlab_gateway.public_gateway.tunnel_api import router as tunnel_api_router
+from local_gitlab_gateway.public_gateway.tunnel_endpoint import router as tunnel_router
 
 runtime_config = load_public_gateway_config()
 

@@ -1,6 +1,5 @@
 """Canonical private project list endpoint tests without GitLab access."""
 
-import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient

@@ -14,7 +14,9 @@ async def test_forward_project_list() -> None:
         assert request.headers["x-request-id"] == "req_one"
         return httpx.Response(200, json={"request_id": "req_one", "projects": []})
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://bridge") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), base_url="http://bridge"
+    ) as client:
         response = await forward_request(
             {"type": "request", "request_id": "req_one", "method": "GET",
              "path": "/internal/api/v1/projects", "query": {}, "body": None},

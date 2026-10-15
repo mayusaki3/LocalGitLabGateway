@@ -4,7 +4,6 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
 from local_gitlab_gateway.common.tunnel_auth import is_valid_tunnel_bearer
-from local_gitlab_gateway.common.tunnel_protocol import TunnelResponse
 from local_gitlab_gateway.common.tunnel_relay import TunnelRelay
 
 router = APIRouter()

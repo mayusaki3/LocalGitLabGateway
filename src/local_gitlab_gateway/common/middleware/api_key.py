@@ -80,7 +80,11 @@ async def internal_api_key_middleware(
         )
 
     provided_api_key = request.headers.get("Authorization", "")
-    provided_api_key = provided_api_key.removeprefix("Bearer ") if provided_api_key.startswith("Bearer ") else ""
+    provided_api_key = (
+        provided_api_key.removeprefix("Bearer ")
+        if provided_api_key.startswith("Bearer ")
+        else ""
+    )
 
     if not provided_api_key or not compare_digest(provided_api_key, expected_api_key):
         return JSONResponse(

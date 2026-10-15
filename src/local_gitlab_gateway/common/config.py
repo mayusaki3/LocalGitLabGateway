@@ -49,11 +49,13 @@ def load_yaml_config(path: Path) -> dict[str, Any]:
 def load_public_gateway_config() -> dict[str, Any]:
     """Load public gateway runtime configuration."""
 
-    return load_yaml_config(Path(os.environ.get("LGG_PUBLIC_CONFIG", str(PUBLIC_GATEWAY_CONFIG_PATH))))
+    path = os.environ.get("LGG_PUBLIC_CONFIG", str(PUBLIC_GATEWAY_CONFIG_PATH))
+    return load_yaml_config(Path(path))
 
 
 
 def load_private_bridge_config() -> dict[str, Any]:
     """Load private bridge runtime configuration."""
 
-    return load_yaml_config(Path(os.environ.get("LGG_PRIVATE_CONFIG", str(PRIVATE_BRIDGE_CONFIG_PATH))))
+    path = os.environ.get("LGG_PRIVATE_CONFIG", str(PRIVATE_BRIDGE_CONFIG_PATH))
+    return load_yaml_config(Path(path))

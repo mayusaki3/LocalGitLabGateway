@@ -38,3 +38,10 @@ def test_send_requires_connection() -> None:
     session = TunnelSession()
     with pytest.raises(RuntimeError):
         session.require_socket()
+
+
+def test_require_socket_returns_active_socket() -> None:
+    session = TunnelSession()
+    socket = object()
+    assert session.attach(socket)
+    assert session.require_socket() is socket

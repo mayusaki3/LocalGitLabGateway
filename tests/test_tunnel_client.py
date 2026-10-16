@@ -35,3 +35,19 @@ async def test_reject_unapproved_route() -> None:
                  "path": "/internal/api/v1/projects/1/secret"},
                 client, "internal-secret",
             )
+
+
+@pytest.mark.asyncio
+async def test_reject_private_response_with_mismatched_id() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"request_id": "req_wrong"})
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), base_url="http://bridge"
+    ) as client:
+        with pytest.raises(ValueError, match="Invalid private bridge response"):
+            await forward_request(
+                {"type": "request", "request_id": "req_one", "method": "GET",
+                 "path": "/internal/api/v1/projects"},
+                client, "internal-secret",
+            )

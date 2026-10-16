@@ -28,3 +28,23 @@ def test_canonical_projects(monkeypatch: pytest.MonkeyPatch, page: int, per_page
     )
     assert response.status_code == 200
     assert response.json()["projects"][0]["id"] == 1
+
+
+def test_canonical_projects_gitlab_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+
+    async def failing_fetch(**kwargs: object) -> list[dict]:
+        raise httpx.ConnectError("GitLab unavailable")
+
+    monkeypatch.setattr(
+        "local_gitlab_gateway.private_bridge.canonical_projects.fetch_gitlab_projects",
+        failing_fetch,
+    )
+    app = FastAPI()
+    app.state.gitlab_base_url = "https://gitlab.invalid"
+    app.state.gitlab_personal_access_token = "test-only"
+    app.include_router(router)
+    response = TestClient(app).get("/internal/api/v1/projects")
+    assert response.status_code == 502
+    assert response.json()["error"]["code"] == "gitlab_unavailable"
+    assert response.json()["request_id"].startswith("req_")

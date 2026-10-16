@@ -232,3 +232,17 @@ def test_main_uses_environment_configuration(monkeypatch: pytest.MonkeyPatch) ->
         values["LGG_PRIVATE_BRIDGE_URL"],
         values["LGG_INTERNAL_API_KEY"],
     )
+
+
+def test_module_entrypoint_calls_main(monkeypatch: pytest.MonkeyPatch) -> None:
+    import runpy
+
+    calls = []
+
+    def fake_asyncio_run(coroutine):
+        calls.append(coroutine)
+        coroutine.close()
+
+    monkeypatch.setattr(asyncio, "run", fake_asyncio_run)
+    runpy.run_path(tunnel_worker.__file__, run_name="__main__")
+    assert len(calls) == 1

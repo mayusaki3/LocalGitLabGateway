@@ -44,3 +44,36 @@ def test_authenticated_connection_and_invalid_message(client: TestClient) -> Non
         with pytest.raises(WebSocketDisconnect):
             socket.receive_json()
     assert not session.connected
+
+
+def test_second_connection_rejected_without_dropping_first(client: TestClient) -> None:
+    headers = {"Authorization": "Bearer test-tunnel-only-secret"}
+    with client.websocket_connect(
+        "/internal/tunnel/v1", subprotocols=["lgg-tunnel.v1"], headers=headers
+    ) as first:
+        assert session.connected
+        with pytest.raises(WebSocketDisconnect) as rejected:
+            with client.websocket_connect(
+                "/internal/tunnel/v1", subprotocols=["lgg-tunnel.v1"], headers=headers
+            ):
+                pass
+        assert rejected.value.code == 1013
+        assert session.connected
+        assert first.accepted_subprotocol == "lgg-tunnel.v1"
+    assert not session.connected
+
+
+def test_normal_client_disconnect_detaches_session(client: TestClient) -> None:
+    with client.websocket_connect(
+        "/internal/tunnel/v1",
+        subprotocols=["lgg-tunnel.v1"],
+        headers={"Authorization": "Bearer test-tunnel-only-secret"},
+    ) as socket:
+        assert session.connected
+        socket.send_json({
+            "type": "response",
+            "request_id": "req_unknown",
+            "status_code": 200,
+            "body": {"request_id": "req_unknown"},
+        })
+    assert not session.connected

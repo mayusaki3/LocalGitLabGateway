@@ -184,3 +184,51 @@ async def test_worker_retries_connection_failure(monkeypatch: pytest.MonkeyPatch
         await tunnel_worker.run_worker(
             "wss://example.invalid/tunnel", "token", "http://bridge", "internal-key"
         )
+
+
+@pytest.mark.asyncio
+async def test_worker_increments_retry_attempt(monkeypatch: pytest.MonkeyPatch) -> None:
+    delays = []
+
+    def failing_connect(*args, **kwargs):
+        raise OSError("offline")
+
+    async def fake_sleep(delay):
+        delays.append(delay)
+        if len(delays) == 2:
+            raise asyncio.CancelledError
+
+    monkeypatch.setattr(tunnel_worker, "connect", failing_connect)
+    monkeypatch.setattr(tunnel_worker.asyncio, "sleep", fake_sleep)
+    with pytest.raises(asyncio.CancelledError):
+        await tunnel_worker.run_worker(
+            "wss://example.invalid/tunnel", "token", "http://bridge", "internal-key"
+        )
+    assert delays == [1, 2]
+
+
+def test_main_uses_environment_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
+    values = {
+        "LGG_TUNNEL_WSS_URL": "wss://example.invalid/tunnel",
+        "LGG_TUNNEL_TOKEN": "token",
+        "LGG_PRIVATE_BRIDGE_URL": "http://bridge",
+        "LGG_INTERNAL_API_KEY": "internal-key",
+    }
+    for key, value in values.items():
+        monkeypatch.setenv(key, value)
+
+    observed = {}
+
+    async def fake_run_worker(wss_url, tunnel_token, private_bridge_url, internal_api_key):
+        observed["args"] = (
+            wss_url, tunnel_token, private_bridge_url, internal_api_key
+        )
+
+    monkeypatch.setattr(tunnel_worker, "run_worker", fake_run_worker)
+    tunnel_worker.main()
+    assert observed["args"] == (
+        values["LGG_TUNNEL_WSS_URL"],
+        values["LGG_TUNNEL_TOKEN"],
+        values["LGG_PRIVATE_BRIDGE_URL"],
+        values["LGG_INTERNAL_API_KEY"],
+    )

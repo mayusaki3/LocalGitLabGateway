@@ -146,3 +146,22 @@ git pull --ff-only
 Workerを起動する前に、公開APIが503を返すことを確認する。Worker起動後は同じAPIが200を返し、`projects[0].id=42`、`page=2`、`per_page=5`、`request_id` が返ることを確認する。WorkerをCtrl+Cで停止し、再度503になることを確認する。
 
 **注意:** この手順はUvicornの直接TLS終端を使うため、nginxのTLS終端・リバースプロキシ設定はまだ検証しない。localhost証明書、ポート、認証情報は検証専用とする。実行結果は未確認。
+
+
+## 11. 2026-10-16 Windows 実WSSスモークテスト結果
+
+ユーザー実測。mkcert v1.4.4 でローカルCAを登録し、`validation/wss_smoke/setup_windows.ps1` によりlocalhost証明書と一時設定を生成した。モックGitLab（8090）、Private Bridge（8081）、Public Gateway（8443, Uvicorn直接TLS）を別プロセスで起動した。
+
+| 手順 | 実測結果 | 判定 |
+|---|---|---|
+| Worker未起動 | GET `/api/v1/projects?page=2&per_page=5` → HTTP 503 | PASS |
+| Worker起動 | 同API → HTTP 200、`projects[0].id=42`、`page=2`、`per_page=5`、`request_id` あり | PASS |
+| Worker停止 | 同API → HTTP 503 | PASS |
+| Worker再起動 | 同API → 正常プロジェクト応答 | PASS |
+| Worker再停止 | 同API → HTTP 503 | PASS |
+
+追加結合テスト `tests/test_tunnel_roundtrip_integration.py` は単独1件成功。全体は77件成功、警告1件、計測対象287行100%カバレッジ、Ruff成功（ユーザー実測）。
+
+**未検証:** 不正Bearer/API認証、処理中切断、ネットワーク障害中のWorker自動再接続、複数同時要求、Ubuntu/nginx/systemd、外部ネットワーク、実GitLab、ChatGPT。検証用のUvicorn直接TLSは本番TLS終端の代替ではない。
+
+既存の第7節・第9節にある「実WSS未実施」は記述当時の状態であり、本節の実測結果を最新とする。

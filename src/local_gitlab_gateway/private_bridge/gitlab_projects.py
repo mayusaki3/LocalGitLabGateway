@@ -33,7 +33,6 @@ async def fetch_gitlab_projects(
 
     async with httpx.AsyncClient(
         timeout=timeout_seconds,
-        verify=False,
     ) as client:
         response = await client.get(
             url,

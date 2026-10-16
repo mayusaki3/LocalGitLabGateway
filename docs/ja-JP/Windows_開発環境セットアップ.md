@@ -62,3 +62,64 @@ Windows検証は本番UbuntuのTLS、nginx、systemd、Firewall動作の代替�
 ## 7. 現状の制限
 
 旧HTTP API・テストの移行は未完了。公開APIとPrivate Bridge間のWSS統合テストは未実行。設定ファイル形式の全項目やセキュリティ検証も未確定のため、本番公開はしない。
+
+
+## 8. 2026-10-16 単体検証の確定結果
+
+Windows 11 / Python 3.11.9、develop commit `22493f0` について利用者が実行し、以下を確認した。
+
+- `python -m pytest -q`: **76 passed, 1 warning**。
+- 対象モジュールのカバレッジ: **287 statements / 0 missed = 100.00%**。
+- `python -m ruff check .`: **All checks passed**。
+- 警告: `StarletteDeprecationWarning`（`starlette.testclient` の httpx 互換性）。テスト失敗ではない。
+
+この結果は現行カバレッジ対象の単体テストであり、実際の WSS 往復、GitLab 実機、Ubuntu/nginx/systemd/TLS 設定を検証したものではない。前節の「初期実装のため失敗する可能性がある」はこの日時の結果で更新する。
+
+## 9. 次工程：Windows 上の Reverse WebSocket 結合検証
+
+### 9.1 検証の構成と前提
+
+1. Windows 開発PC上で **Public Gateway（127.0.0.1:8080）** と **Private Bridge（127.0.0.1:8081）** を別プロセスとして起動する。Private Bridge の GitLab 接続先はモック HTTP サーバーとし、実 PAT は使用しない。
+2. WSS Worker は別プロセスとして手動起動する。Public Gateway 側の `/internal/tunnel/v1` は WebSocket 受入口であり、Worker が要求する `wss://` との間に **TLS 終端プロキシが必要**。単純な `ws://127.0.0.1:8080` への変更は行わない。
+3. ローカル検証用 CA とサーバー証明書を使用する場合、Worker が証明書を検証できるよう `SSL_CERT_FILE` などの信頼設定を行う。自己署名証明書の検証無効化は行わない。
+4. 設定ファイルはリポジトリ外に作り、`LGG_PUBLIC_CONFIG` と `LGG_PRIVATE_CONFIG` で指定する。GitLab PAT、公開 API Key、内部 API Key、WSS Token はそれぞれ別のテスト用値とする。
+
+### 9.2 起動前の確認
+
+Public Gateway の設定には少なくとも `security.api_key`、`private_bridge.base_url`、`private_bridge.internal_api_key`、`tunnel.token` が必要。Private Bridge の設定には `security.internal_api_key`、`gitlab.base_url`、`gitlab.personal_access_token` が必要。正確な構造は現行の `main.py` と構成例に照合する。
+
+```powershell
+$env:LGG_PUBLIC_CONFIG = "C:\\LGG-test\\public.yaml"
+$env:LGG_PRIVATE_CONFIG = "C:\\LGG-test\\private.yaml"
+.\\.venv\\Scripts\\python.exe -m uvicorn local_gitlab_gateway.public_gateway.main:app --host 127.0.0.1 --port 8080
+```
+
+別の PowerShell で:
+
+```powershell
+$env:LGG_PRIVATE_CONFIG = "C:\\LGG-test\\private.yaml"
+.\\.venv\\Scripts\\python.exe -m uvicorn local_gitlab_gateway.private_bridge.main:app --host 127.0.0.1 --port 8081
+```
+
+これらは **起動例であり、結合検証合格の記録ではない**。パス、設定値、モックサーバー、TLS プロキシを準備してから実行する。
+
+### 9.3 検証項目と合格条件
+
+| 検証 | 条件 |
+|---|---|
+| トンネル停止 | 認証済み `GET /api/v1/projects` が 503 と `request_id` を返す |
+| WSS 認証 | トンネル専用 Bearer Token が不正なら接続拒否 |
+| WSS 接続 | 正しい Token / `lgg-tunnel.v1` で接続できる |
+| 正常往復 | Public API → WSS → Private Bridge → モック GitLab → WSS → Public API の結果が正規化形式 |
+| ID 伝播 | 全経路で同一 `request_id` |
+| 禁止操作 | 許可リスト外の要求が GitLab に到達しない |
+| 切断 | 待機中の要求は 503、接続切断後は 503 |
+| 再接続 | Worker が稼働中のみバックオフで再接続 |
+| 手動停止 | Worker 停止後は再接続しない |
+| 機密情報 | PAT、内部 API Key、WSS Token が公開応答・通常ログに出ない |
+
+### 9.4 現時点の実装上の注意
+
+- `public_gateway/main.py` と `private_bridge/main.py` には **旧 HTTP API ルートが残存**する。結合検証では正規ルート `/api/v1/projects` と `/internal/api/v1/projects` を使用し、旧経路の公開可否は別途整理する。
+- Worker は受信要求を逐次処理している。複数同時要求や遅延時の挙動は結合テストで追加確認する。
+- 実 WSS 通信を伴う検証は未実施。Windows でのモック結合合格後に FW 内環境、外部 Ubuntu、ChatGPT の順に進める。

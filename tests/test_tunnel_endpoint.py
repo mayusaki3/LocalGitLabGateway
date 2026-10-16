@@ -52,11 +52,10 @@ def test_second_connection_rejected_without_dropping_first(client: TestClient) -
         "/internal/tunnel/v1", subprotocols=["lgg-tunnel.v1"], headers=headers
     ) as first:
         assert session.connected
-        with pytest.raises(WebSocketDisconnect) as rejected:
-            with client.websocket_connect(
-                "/internal/tunnel/v1", subprotocols=["lgg-tunnel.v1"], headers=headers
-            ):
-                pass
+        with pytest.raises(WebSocketDisconnect) as rejected, client.websocket_connect(
+            "/internal/tunnel/v1", subprotocols=["lgg-tunnel.v1"], headers=headers
+        ):
+            pass
         assert rejected.value.code == 1013
         assert session.connected
         assert first.accepted_subprotocol == "lgg-tunnel.v1"

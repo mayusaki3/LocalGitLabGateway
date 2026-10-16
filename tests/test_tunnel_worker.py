@@ -1,7 +1,7 @@
 """FW-side tunnel worker tests with an in-memory WebSocket fake."""
 
+import asyncio
 import json
-from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -159,8 +159,6 @@ async def test_worker_connects_and_retries(monkeypatch: pytest.MonkeyPatch) -> N
         assert delay == 1
         raise asyncio.CancelledError
 
-    import asyncio
-
     monkeypatch.setattr(tunnel_worker, "connect", fake_connect)
     monkeypatch.setattr(tunnel_worker, "forward_request", fake_forward)
     monkeypatch.setattr(tunnel_worker.asyncio, "sleep", stop_after_first_sleep)
@@ -173,8 +171,6 @@ async def test_worker_connects_and_retries(monkeypatch: pytest.MonkeyPatch) -> N
 
 @pytest.mark.asyncio
 async def test_worker_retries_connection_failure(monkeypatch: pytest.MonkeyPatch) -> None:
-    import asyncio
-
     def failing_connect(*args, **kwargs):
         raise OSError("connection refused")
 

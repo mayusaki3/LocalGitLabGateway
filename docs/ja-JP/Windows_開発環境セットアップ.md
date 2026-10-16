@@ -123,3 +123,26 @@ $env:LGG_PRIVATE_CONFIG = "C:\\LGG-test\\private.yaml"
 - `public_gateway/main.py` と `private_bridge/main.py` には **旧 HTTP API ルートが残存**する。結合検証では正規ルート `/api/v1/projects` と `/internal/api/v1/projects` を使用し、旧経路の公開可否は別途整理する。
 - Worker は受信要求を逐次処理している。複数同時要求や遅延時の挙動は結合テストで追加確認する。
 - 実 WSS 通信を伴う検証は未実施。Windows でのモック結合合格後に FW 内環境、外部 Ubuntu、ChatGPT の順に進める。
+
+
+## 10. 実WSSスモークテスト（ローカルホスト）
+
+`validation/wss_smoke/mock_gitlab.py` は、ループバックで起動する検証専用のGitLab模擬API。 `validation/wss_smoke/setup_windows.ps1` は、mkcertを使ってローカルTLS証明書と検証用YAMLを一時ディレクトリに作り、各プロセスの起動コマンドを表示する。**自動起動や自動配備は行わない。**
+
+事前に `mkcert` をインストールし、開発PC上で `mkcert -install` によりローカルCAを信頼させる。検証用CAは本番環境に配布しない。
+
+```powershell
+git pull --ff-only
+.\\validation\\wss_smoke\\setup_windows.ps1
+```
+
+表示されたコマンドを別々のPowerShellで順に実行する。
+
+1. モックGitLab: `127.0.0.1:8090`
+2. Private Bridge: `127.0.0.1:8081`
+3. TLS Public Gateway: `https://localhost:8443`
+4. Tunnel Worker: `wss://localhost:8443/internal/tunnel/v1`
+
+Workerを起動する前に、公開APIが503を返すことを確認する。Worker起動後は同じAPIが200を返し、`projects[0].id=42`、`page=2`、`per_page=5`、`request_id` が返ることを確認する。WorkerをCtrl+Cで停止し、再度503になることを確認する。
+
+**注意:** この手順はUvicornの直接TLS終端を使うため、nginxのTLS終端・リバースプロキシ設定はまだ検証しない。localhost証明書、ポート、認証情報は検証専用とする。実行結果は未確認。

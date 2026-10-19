@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 from websockets.asyncio.client import connect
-from websockets.exceptions import ConnectionClosed
+from websockets.exceptions import ConnectionClosed, InvalidStatus
 
 from local_gitlab_gateway.common.tunnel_protocol import TunnelRequest, TunnelResponse
 from local_gitlab_gateway.private_bridge.tunnel_client import forward_request
@@ -104,6 +104,11 @@ async def run_worker(
                             task.cancel()
                         if in_flight:
                             await asyncio.gather(*in_flight, return_exceptions=True)
+            except InvalidStatus as exc:
+                if exc.response.status_code in (401, 403):
+                    raise RuntimeError(
+                        "Tunnel authentication rejected; check worker credentials"
+                    ) from None
             except (OSError, ConnectionClosed, TimeoutError):
                 pass
             await asyncio.sleep(reconnect_delay(attempt))

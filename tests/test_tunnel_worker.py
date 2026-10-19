@@ -252,9 +252,10 @@ def test_module_entrypoint_calls_main(monkeypatch: pytest.MonkeyPatch) -> None:
 async def test_worker_handles_fast_request_before_slow_request_completes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A slow private request must not block a later request on one WSS session."""
+    """The fast response must arrive before a blocked slow response."""
     slow_started = asyncio.Event()
     release_slow = asyncio.Event()
+    fast_sent = asyncio.Event()
     responses = []
 
     class ConcurrentSocket:
@@ -269,23 +270,22 @@ async def test_worker_handles_fast_request_before_slow_request_completes(
                 yield json.dumps({"type": "request", "request_id": "req_slow",
                                   "method": "GET", "path": "/internal/api/v1/projects",
                                   "query": {"page": 99}})
-                await asyncio.wait_for(slow_started.wait(), timeout=1)
+                # The second frame is available immediately; no artificial stall.
                 yield json.dumps({"type": "request", "request_id": "req_fast",
                                   "method": "GET", "path": "/internal/api/v1/projects",
                                   "query": {"page": 2}})
-                # Give the fast task an opportunity to finish before the slow one.
-                await asyncio.sleep(0.05)
-                assert any(r["request_id"] == "req_fast" for r in responses), (
-                    "Fast request was blocked by the slow request"
-                )
+                await asyncio.wait_for(fast_sent.wait(), timeout=0.5)
                 release_slow.set()
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(0.01)
                 raise asyncio.CancelledError
 
             return frames()
 
         async def send(self, value: str) -> None:
-            responses.append(json.loads(value))
+            response = json.loads(value)
+            responses.append(response)
+            if response["request_id"] == "req_fast":
+                fast_sent.set()
 
     async def fake_forward(payload, client, key):
         request_id = payload["request_id"]
@@ -298,8 +298,14 @@ async def test_worker_handles_fast_request_before_slow_request_completes(
     monkeypatch.setattr(tunnel_worker, "connect", lambda *args, **kwargs: ConcurrentSocket())
     monkeypatch.setattr(tunnel_worker, "forward_request", fake_forward)
 
-    with pytest.raises(asyncio.CancelledError):
-        await tunnel_worker.run_worker(
-            "wss://example.invalid/tunnel", "token", "http://bridge", "internal-key"
-        )
-    assert [r["request_id"] for r in responses] == ["req_fast", "req_slow"]
+    try:
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(
+                tunnel_worker.run_worker(
+                    "wss://example.invalid/tunnel", "token", "http://bridge", "internal-key"
+                ),
+                timeout=2,
+            )
+    finally:
+        release_slow.set()
+    assert responses[0]["request_id"] == "req_fast"

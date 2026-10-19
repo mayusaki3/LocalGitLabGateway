@@ -128,6 +128,7 @@ async def test_worker_rejects_invalid_configuration(
 @pytest.mark.asyncio
 async def test_worker_connects_and_retries(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = []
+    response_sent = asyncio.Event()
 
     class FakeConnection:
         async def __aenter__(self):
@@ -140,10 +141,12 @@ async def test_worker_connects_and_retries(monkeypatch: pytest.MonkeyPatch) -> N
             async def frames():
                 yield json.dumps({"type": "request", "request_id": "req_worker",
                                   "method": "GET", "path": "/internal/api/v1/projects"})
+                await asyncio.wait_for(response_sent.wait(), timeout=1)
             return frames()
 
         async def send(self, value: str) -> None:
             calls.append(json.loads(value))
+            response_sent.set()
 
     def fake_connect(*args, **kwargs):
         assert kwargs["subprotocols"] == ["lgg-tunnel.v1"]

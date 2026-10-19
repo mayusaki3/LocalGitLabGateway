@@ -321,6 +321,7 @@ async def test_worker_applies_in_flight_backpressure(
     """The worker waits for capacity before scheduling another request."""
     release_first = asyncio.Event()
     first_started = asyncio.Event()
+    second_started = asyncio.Event()
     responses = []
 
     class Socket:
@@ -337,9 +338,7 @@ async def test_worker_applies_in_flight_backpressure(
                         "type": "request", "request_id": request_id,
                         "method": "GET", "path": "/internal/api/v1/projects",
                     })
-                await asyncio.wait_for(first_started.wait(), timeout=1)
-                release_first.set()
-                await asyncio.sleep(0.01)
+                await asyncio.wait_for(second_started.wait(), timeout=1)
                 raise asyncio.CancelledError
             return frames()
 
@@ -350,18 +349,32 @@ async def test_worker_applies_in_flight_backpressure(
         if payload["request_id"] == "req_first":
             first_started.set()
             await release_first.wait()
+        else:
+            second_started.set()
         return {"type": "response", "request_id": payload["request_id"],
                 "status_code": 200, "body": {"request_id": payload["request_id"]}}
 
     monkeypatch.setattr(tunnel_worker, "MAX_IN_FLIGHT", 1)
     monkeypatch.setattr(tunnel_worker, "connect", lambda *args, **kwargs: Socket())
     monkeypatch.setattr(tunnel_worker, "forward_request", forward)
-    with pytest.raises(asyncio.CancelledError):
-        await asyncio.wait_for(
-            tunnel_worker.run_worker(
-                "wss://example.invalid/tunnel", "token", "http://bridge", "internal-key"
-            ), timeout=2,
+
+    worker = asyncio.create_task(
+        tunnel_worker.run_worker(
+            "wss://example.invalid/tunnel", "token", "http://bridge", "internal-key"
         )
+    )
+    try:
+        await asyncio.wait_for(first_started.wait(), timeout=1)
+        # With a single slot, the second request cannot start yet.
+        assert not second_started.is_set()
+        release_first.set()
+        await asyncio.wait_for(second_started.wait(), timeout=1)
+    finally:
+        release_first.set()
+        worker.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await worker
+
     assert responses[0]["request_id"] == "req_first"
 
 

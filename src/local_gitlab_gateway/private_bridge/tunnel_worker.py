@@ -18,6 +18,9 @@ from local_gitlab_gateway.common.tunnel_protocol import TunnelRequest, TunnelRes
 from local_gitlab_gateway.private_bridge.tunnel_client import forward_request
 
 
+MAX_IN_FLIGHT = 16
+
+
 def reconnect_delay(attempt: int) -> int:
     """Bounded exponential retry delay in seconds."""
     return min(30, 2 ** min(attempt, 5))
@@ -85,8 +88,23 @@ async def run_worker(
                     max_size=1024 * 1024,
                 ) as socket:
                     attempt = 0
-                    async for raw in socket:
-                        await process_message(socket, raw, client, internal_api_key)
+                    in_flight: set[asyncio.Task[None]] = set()
+                    try:
+                        async for raw in socket:
+                            while len(in_flight) >= MAX_IN_FLIGHT:
+                                await asyncio.wait(
+                                    in_flight, return_when=asyncio.FIRST_COMPLETED
+                                )
+                            task = asyncio.create_task(
+                                process_message(socket, raw, client, internal_api_key)
+                            )
+                            in_flight.add(task)
+                            task.add_done_callback(in_flight.discard)
+                    finally:
+                        for task in in_flight:
+                            task.cancel()
+                        if in_flight:
+                            await asyncio.gather(*in_flight, return_exceptions=True)
             except (OSError, ConnectionClosed, TimeoutError):
                 pass
             await asyncio.sleep(reconnect_delay(attempt))

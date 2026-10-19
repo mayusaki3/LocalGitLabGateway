@@ -312,3 +312,105 @@ async def test_worker_handles_fast_request_before_slow_request_completes(
     finally:
         release_slow.set()
     assert responses[0]["request_id"] == "req_fast"
+
+
+@pytest.mark.asyncio
+async def test_worker_applies_in_flight_backpressure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The worker waits for capacity before scheduling another request."""
+    release_first = asyncio.Event()
+    first_started = asyncio.Event()
+    responses = []
+
+    class Socket:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        def __aiter__(self):
+            async def frames():
+                for request_id in ("req_first", "req_second"):
+                    yield json.dumps({
+                        "type": "request", "request_id": request_id,
+                        "method": "GET", "path": "/internal/api/v1/projects",
+                    })
+                await asyncio.wait_for(first_started.wait(), timeout=1)
+                release_first.set()
+                await asyncio.sleep(0.01)
+                raise asyncio.CancelledError
+            return frames()
+
+        async def send(self, value: str) -> None:
+            responses.append(json.loads(value))
+
+    async def forward(payload, client, key):
+        if payload["request_id"] == "req_first":
+            first_started.set()
+            await release_first.wait()
+        return {"type": "response", "request_id": payload["request_id"],
+                "status_code": 200, "body": {"request_id": payload["request_id"]}}
+
+    monkeypatch.setattr(tunnel_worker, "MAX_IN_FLIGHT", 1)
+    monkeypatch.setattr(tunnel_worker, "connect", lambda *args, **kwargs: Socket())
+    monkeypatch.setattr(tunnel_worker, "forward_request", forward)
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(
+            tunnel_worker.run_worker(
+                "wss://example.invalid/tunnel", "token", "http://bridge", "internal-key"
+            ), timeout=2,
+        )
+    assert responses[0]["request_id"] == "req_first"
+
+
+@pytest.mark.asyncio
+async def test_worker_cancels_in_flight_on_disconnect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Disconnect cancels unfinished private requests before reconnecting."""
+    started = asyncio.Event()
+    cancelled = asyncio.Event()
+
+    class Socket:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        def __aiter__(self):
+            async def frames():
+                yield json.dumps({
+                    "type": "request", "request_id": "req_pending",
+                    "method": "GET", "path": "/internal/api/v1/projects",
+                })
+                await asyncio.wait_for(started.wait(), timeout=1)
+                # Simulate the WSS connection ending while HTTP is pending.
+            return frames()
+
+        async def send(self, value: str) -> None:
+            raise AssertionError("Cancelled request must not send a response")
+
+    async def forward(payload, client, key):
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.set()
+
+    async def stop_after_disconnect(delay):
+        assert delay == 1
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr(tunnel_worker, "connect", lambda *args, **kwargs: Socket())
+    monkeypatch.setattr(tunnel_worker, "forward_request", forward)
+    monkeypatch.setattr(tunnel_worker.asyncio, "sleep", stop_after_disconnect)
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(
+            tunnel_worker.run_worker(
+                "wss://example.invalid/tunnel", "token", "http://bridge", "internal-key"
+            ), timeout=2,
+        )
+    assert cancelled.is_set()

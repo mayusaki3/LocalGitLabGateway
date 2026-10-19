@@ -17,7 +17,6 @@ from websockets.exceptions import ConnectionClosed
 from local_gitlab_gateway.common.tunnel_protocol import TunnelRequest, TunnelResponse
 from local_gitlab_gateway.private_bridge.tunnel_client import forward_request
 
-
 MAX_IN_FLIGHT = 16
 
 

@@ -2,9 +2,11 @@
 
 import asyncio
 import json
+from types import SimpleNamespace
 
 import httpx
 import pytest
+from websockets.exceptions import InvalidStatus
 
 from local_gitlab_gateway.private_bridge import tunnel_worker
 from local_gitlab_gateway.private_bridge.tunnel_worker import (
@@ -427,3 +429,46 @@ async def test_worker_cancels_in_flight_on_disconnect(
             ), timeout=2,
         )
     assert cancelled.is_set()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [401, 403])
+async def test_worker_stops_on_tunnel_auth_rejection(
+    monkeypatch: pytest.MonkeyPatch, status: int
+) -> None:
+    attempts = []
+
+    def reject(*args, **kwargs):
+        attempts.append(1)
+        raise InvalidStatus(SimpleNamespace(status_code=status))
+
+    monkeypatch.setattr(tunnel_worker, "connect", reject)
+    with pytest.raises(RuntimeError, match="Tunnel authentication rejected") as error:
+        await tunnel_worker.run_worker(
+            "wss://example.invalid/tunnel", "secret-token", "http://bridge", "key"
+        )
+    assert len(attempts) == 1
+    assert "secret-token" not in str(error.value)
+
+
+@pytest.mark.asyncio
+async def test_worker_retries_transient_handshake_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts = []
+
+    def reject(*args, **kwargs):
+        attempts.append(1)
+        raise InvalidStatus(SimpleNamespace(status_code=503))
+
+    async def stop_after_retry(delay):
+        assert delay == 1
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr(tunnel_worker, "connect", reject)
+    monkeypatch.setattr(tunnel_worker.asyncio, "sleep", stop_after_retry)
+    with pytest.raises(asyncio.CancelledError):
+        await tunnel_worker.run_worker(
+            "wss://example.invalid/tunnel", "token", "http://bridge", "key"
+        )
+    assert len(attempts) == 1

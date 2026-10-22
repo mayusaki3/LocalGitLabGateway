@@ -8,3 +8,7 @@ htmlcov/
 *.log
 config/*/config.yaml
 *.secret
+
+# Local two-host validation: machine-specific configuration and certificates
+validation/local-config/
+validation/local-certs/
